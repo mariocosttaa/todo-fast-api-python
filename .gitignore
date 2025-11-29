@@ -1,4 +1,2 @@
-app/__pycache__/
-app/routers/__pycache__/
-alembic/__pycache__/
+**/__pycache__/
 .env

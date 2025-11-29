@@ -1,9 +1,9 @@
-version: "3.8"
 services:
   web:
     build: .
     volumes:
       - ./app:/app/app  # mount para facilitar desenvolvimento (hot-reload)
+      - .:/app  # mount root para alembic e outros arquivos
     ports:
       - "8000:8000"
     environment:

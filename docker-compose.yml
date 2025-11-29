@@ -1,0 +1,10 @@
+version: "3.8"
+services:
+  web:
+    build: .
+    volumes:
+      - ./app:/app/app  # mount para facilitar desenvolvimento (hot-reload)
+    ports:
+      - "8000:8000"
+    environment:
+      - ENV=development

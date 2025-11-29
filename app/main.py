@@ -1,10 +1,11 @@
 from fastapi import FastAPI
-from app.routers import health
+from app.routers import web
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 
-app = FastAPI(title="ToDo API - FastAPI (esqueleto)")
+app = FastAPI(title=os.getenv("APP_NAME"))
 
-app.include_router(health.router)
+# router 
+app.include_router(web.router)
 
-@app.get("/")
-def read_root():
-    return {"message": "API ToDo - FastAPI (esqueleto)"}

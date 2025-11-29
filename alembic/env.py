@@ -16,8 +16,16 @@ load_dotenv(dotenv_path=env_path)
 # access to the values within the .ini file in use.
 config = context.config
 
-# Get database URL from environment variable
+# Get database URL from environment variable or construct it
 database_url = os.getenv("DATABASE_URL")
+if not database_url:
+    # Construct DATABASE_URL from individual variables
+    postgres_user = os.getenv("POSTGRES_USER")
+    postgres_password = os.getenv("POSTGRES_PASSWORD")
+    postgres_db = os.getenv("POSTGRES_DB")
+    if postgres_user and postgres_password and postgres_db:
+        database_url = f"postgresql://{postgres_user}:{postgres_password}@localhost:5432/{postgres_db}"
+
 if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
 

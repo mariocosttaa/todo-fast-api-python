@@ -6,3 +6,4 @@ passlib[bcrypt]
 pytest
 alembic
 python-dotenv
+psycopg2-binary

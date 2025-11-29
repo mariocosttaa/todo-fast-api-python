@@ -1,270 +1,210 @@
 #!/usr/bin/env python3
-"""
-Management CLI for FastAPI application
-Usage: python manage.py <command> [options]
-"""
-
-import argparse
-import subprocess
-import sys
-from pathlib import Path
-from sqlalchemy import inspect, text
+"""Interactive shell for database operations and model management"""
+from sqlmodel import Session, select, inspect, text
 from app.database.base import engine
+from app.models import User, Todo, RefreshToken
+from datetime import datetime
+from typing import Type, TypeVar, Any
+import uuid
 
 # ============================================================================
-# Utility Functions
+# Database Session
 # ============================================================================
-def run_command(cmd, check=True):
-    """Run a shell command"""
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-    if check and result.returncode != 0:
-        print(f"❌ Error: {result.stderr}")
-        sys.exit(1)
-    return result
+session = Session(engine)
 
 # ============================================================================
-# Migration Commands
+# Type Definitions
 # ============================================================================
-def migrate():
-    """Run pending migrations"""
-    print("🔄 Running migrations...")
-    run_command("alembic upgrade head")
-    print("✅ Migrations completed!")
-
-
-def migrate_rollback(steps=1):
-    """Rollback migrations"""
-    print(f"⏪ Rolling back {steps} migration(s)...")
-    run_command(f"alembic downgrade -{steps}")
-    print("✅ Rollback completed!")
-
-
-def migrate_reset():
-    """Reset all migrations (rollback to base)"""
-    print("⚠️  Resetting all migrations...")
-    confirm = input("Are you sure? This will rollback ALL migrations (yes/no): ")
-    if confirm.lower() != 'yes':
-        print("Cancelled.")
-        return
-    run_command("alembic downgrade base")
-    print("✅ All migrations rolled back!")
-
-
-def migrate_refresh():
-    """Reset and re-run all migrations"""
-    print("🔄 Refreshing migrations (reset + migrate)...")
-    migrate_reset()
-    migrate()
-
-
-def migrate_status():
-    """Show migration status"""
-    print("📊 Migration Status:")
-    print("-" * 50)
-    run_command("alembic current")
-    print("\n📜 Migration History:")
-    print("-" * 50)
-    run_command("alembic history")
-
-
-def migrate_make(message):
-    """Create a new migration"""
-    if not message:
-        print("❌ Error: Migration message is required")
-        print("Usage: python manage.py migrate:make 'your message here'")
-        sys.exit(1)
-    print(f"📝 Creating migration: {message}")
-    run_command(f'alembic revision --autogenerate -m "{message}"')
-    print("✅ Migration created!")
-
+ModelType = TypeVar('ModelType')
 
 # ============================================================================
-# Database Management Commands
+# Generic ORM Helper Functions
 # ============================================================================
-def db_reset():
-    """Drop all tables and clear alembic_version"""
-    print("⚠️  DANGER: This will drop ALL tables!")
-    confirm = input("Are you sure? Type 'yes' to continue: ")
-    if confirm.lower() != 'yes':
-        print("Cancelled.")
-        return
+def all(model_class: Type[ModelType]) -> list[ModelType]:
+    """Get all records from a model"""
+    return list(session.exec(select(model_class)).all())
+
+def find(model_class: Type[ModelType], id: Any) -> ModelType | None:
+    """Find a record by ID"""
+    return session.get(model_class, id)
+
+def first(model_class: Type[ModelType]) -> ModelType | None:
+    """Get the first record from a model"""
+    return session.exec(select(model_class)).first()
+
+def count(model_class: Type[ModelType]) -> int:
+    """Count total records in a model"""
+    return len(list(session.exec(select(model_class)).all()))
+
+def create(model_class: Type[ModelType], **kwargs) -> ModelType:
+    """Create a new record"""
+    instance = model_class(**kwargs)
+    session.add(instance)
+    session.commit()
+    session.refresh(instance)
+    return instance
+
+def delete(instance: ModelType) -> None:
+    """Delete a record from the database"""
+    session.delete(instance)
+    session.commit()
+
+def save(instance: ModelType) -> ModelType:
+    """Save or update a record"""
+    session.add(instance)
+    session.commit()
+    session.refresh(instance)
+    return instance
+
+# ============================================================================
+# Model Method Extensions
+# ============================================================================
+def _add_model_methods(model_class):
+    """Add convenient ORM methods to model classes"""
+    @staticmethod
+    def all():
+        return list(session.exec(select(model_class)).all())
     
-    print("🗑️  Dropping all tables...")
+    @staticmethod
+    def find(id):
+        return session.get(model_class, id)
+    
+    @staticmethod
+    def first():
+        return session.exec(select(model_class)).first()
+    
+    @staticmethod
+    def count():
+        return len(list(session.exec(select(model_class)).all()))
+    
+    @staticmethod
+    def create(**kwargs):
+        instance = model_class(**kwargs)
+        session.add(instance)
+        session.commit()
+        session.refresh(instance)
+        return instance
+    
+    model_class.all = all
+    model_class.find = find
+    model_class.first = first
+    model_class.count = count
+    model_class.create = create
+
+# ============================================================================
+# Database Management Functions
+# ============================================================================
+def drop_all_tables():
+    """Drop all tables and clear alembic_version - DANGEROUS!"""
     inspector = inspect(engine)
     tables = inspector.get_table_names()
     
+    print(f"Found {len(tables)} tables: {tables}")
+    confirm = input("Are you sure you want to drop ALL tables? (yes/no): ")
+    
+    if confirm.lower() != 'yes':
+        print("Cancelled.")
+        return
+    
     with engine.connect() as conn:
-        # Drop alembic_version first
         conn.execute(text("DROP TABLE IF EXISTS alembic_version CASCADE"))
-        # Drop all other tables
         for table in tables:
             conn.execute(text(f"DROP TABLE IF EXISTS {table} CASCADE"))
         conn.commit()
     
-    print(f"✅ Dropped {len(tables)} table(s): {', '.join(tables)}")
+    print("✅ All tables dropped!")
 
-
-def db_clear_alembic():
-    """Clear alembic_version table (fixes migration tracking issues)"""
-    print("🧹 Clearing alembic_version table...")
-    try:
-        with engine.connect() as conn:
-            conn.execute(text("DROP TABLE IF EXISTS alembic_version CASCADE"))
-            conn.commit()
-        print("✅ alembic_version table cleared!")
-        print("💡 Now you can create a fresh migration with: python manage.py migrate:make 'message'")
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        print("💡 Make sure your database is running and accessible")
-
-
-def db_wipe():
-    """Drop all tables and clear alembic_version"""
-    print("⚠️  DANGER: This will drop ALL tables!")
-    confirm = input("Are you sure? Type 'yes' to continue: ")
-    if confirm.lower() != 'yes':
-        print("Cancelled.")
-        return
-    
-    print("🗑️  Dropping all tables...")
-    try:
-        inspector = inspect(engine)
-        tables = inspector.get_table_names()
-        
-        if not tables:
-            print("ℹ️  No tables found.")
-            return
-        
-        with engine.connect() as conn:
-            # Drop alembic_version first
-            conn.execute(text("DROP TABLE IF EXISTS alembic_version CASCADE"))
-            # Drop all other tables
-            for table in tables:
-                if table != 'alembic_version':  # Already dropped
-                    conn.execute(text(f"DROP TABLE IF EXISTS {table} CASCADE"))
-                    print(f"  Dropped: {table}")
-            conn.commit()
-        
-        print(f"✅ Dropped {len(tables)} table(s): {', '.join(tables)}")
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        print("💡 Make sure your database is running and accessible")
-
-
-def db_fresh():
-    """Drop all tables, clear migrations, and re-run migrations"""
-    print("🔄 Fresh migration (reset DB + migrate)...")
-    db_reset()
-    # Clear migration files
-    migrations_dir = Path("app/database/migrations")
-    alembic_versions = Path("alembic/versions")
-    
-    for file in migrations_dir.glob("*.py"):
-        if file.name != "__init__.py":
-            file.unlink()
-            print(f"  Deleted: {file}")
-    
-    for file in alembic_versions.glob("*.py"):
-        if file.name != "__init__.py":
-            file.unlink()
-            print(f"  Deleted: {file}")
-    
-    print("✅ Database reset and migration files cleared!")
-    print("💡 Run 'python manage.py migrate:make' to create a new migration")
-
-
-def migrate_fresh():
-    """Alias for db:fresh"""
-    db_fresh()
-
+def reset_database():
+    """Complete reset: drop all tables and clear alembic version"""
+    drop_all_tables()
+    print("✅ Database reset complete!")
 
 # ============================================================================
-# Shell Commands
+# Initialize Model Extensions
 # ============================================================================
-def tinker():
-    """Open interactive shell"""
-    print("🐚 Opening interactive shell...")
-    run_command("python shell.py", check=False)
+_add_model_methods(User)
+_add_model_methods(Todo)
+_add_model_methods(RefreshToken)
 
 # ============================================================================
-# CLI Setup
+# Welcome Message
 # ============================================================================
-def main():
-    parser = argparse.ArgumentParser(
-        description="Management CLI for FastAPI application",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  python manage.py migrate              # Run migrations
-  python manage.py migrate:rollback     # Rollback last migration
-  python manage.py migrate:rollback 3    # Rollback 3 migrations
-  python manage.py migrate:reset         # Rollback all migrations
-  python manage.py migrate:refresh      # Reset + migrate
-  python manage.py migrate:status       # Show migration status
-  python manage.py migrate:make "add users table"  # Create migration
-  python manage.py db:reset             # Drop all tables
-  python manage.py db:wipe             # Drop all tables (same as db:reset)
-  python manage.py db:clear-alembic     # Clear alembic_version table
-  python manage.py db:fresh             # Reset DB + clear migrations
-  python manage.py tinker               # Open interactive shell
-        """
-    )
-    
-    subparsers = parser.add_subparsers(dest='command', help='Available commands')
-    
-    # Migrate commands
-    migrate_parser = subparsers.add_parser('migrate', help='Run pending migrations')
-    migrate_parser.set_defaults(func=migrate)
-    
-    rollback_parser = subparsers.add_parser('migrate:rollback', help='Rollback migrations')
-    rollback_parser.add_argument('steps', type=int, nargs='?', default=1, help='Number of steps to rollback')
-    rollback_parser.set_defaults(func=lambda args: migrate_rollback(args.steps))
-    
-    reset_parser = subparsers.add_parser('migrate:reset', help='Reset all migrations')
-    reset_parser.set_defaults(func=migrate_reset)
-    
-    refresh_parser = subparsers.add_parser('migrate:refresh', help='Reset and re-run migrations')
-    refresh_parser.set_defaults(func=migrate_refresh)
-    
-    status_parser = subparsers.add_parser('migrate:status', help='Show migration status')
-    status_parser.set_defaults(func=migrate_status)
-    
-    make_parser = subparsers.add_parser('migrate:make', help='Create a new migration')
-    make_parser.add_argument('message', help='Migration message')
-    make_parser.set_defaults(func=lambda args: migrate_make(args.message))
-    
-    # Database commands
-    db_reset_parser = subparsers.add_parser('db:reset', help='Drop all tables')
-    db_reset_parser.set_defaults(func=db_reset)
-    
-    db_wipe_parser = subparsers.add_parser('db:wipe', help='Drop all tables')
-    db_wipe_parser.set_defaults(func=db_wipe)
-    
-    db_clear_alembic_parser = subparsers.add_parser('db:clear-alembic', help='Clear alembic_version table')
-    db_clear_alembic_parser.set_defaults(func=db_clear_alembic)
-    
-    db_fresh_parser = subparsers.add_parser('db:fresh', help='Drop all tables and clear migrations')
-    db_fresh_parser.set_defaults(func=db_fresh)
-    
-    migrate_fresh_parser = subparsers.add_parser('migrate:fresh', help='Alias for db:fresh')
-    migrate_fresh_parser.set_defaults(func=migrate_fresh)
-    
-    # Shell command
-    tinker_parser = subparsers.add_parser('tinker', help='Open interactive shell')
-    tinker_parser.set_defaults(func=tinker)
-    
-    args = parser.parse_args()
-    
-    if not args.command:
-        parser.print_help()
-        sys.exit(1)
-    
-    # Handle commands that need args differently
-    if args.command in ['migrate:rollback', 'migrate:make']:
-        args.func(args)
-    else:
-        args.func()
+print("=" * 60)
+print("FastAPI Interactive Shell")
+print("=" * 60)
+print("\n📦 Available Models:")
+print("  - User, Todo, RefreshToken")
+print("\n🔧 Available Utilities:")
+print("  - session: Database session")
+print("  - datetime, uuid: Python utilities")
+print("\n✨ Generic ORM Functions:")
+print("  all(Model)              # Get all records")
+print("  find(Model, id)         # Find by ID")
+print("  first(Model)            # Get first record")
+print("  count(Model)            # Count records")
+print("  create(Model, **kwargs) # Create new record")
+print("  save(instance)          # Save/update record")
+print("  delete(instance)        # Delete record")
+print("\n🎯 Model Static Methods:")
+print("  Model.all()             # Get all records")
+print("  Model.find(id)          # Find by ID")
+print("  Model.first()           # Get first record")
+print("  Model.count()           # Count records")
+print("  Model.create(**kwargs)  # Create new record")
+print("=" * 60)
+print()
 
+# Start interactive shell
+import code
+code.interact(local=locals(), banner="")
 
-if __name__ == '__main__':
-    main()
+# ============================================================================
+# EXAMPLES - Run these in the shell:
+# ============================================================================
+#
+# # Get all users
+# users = all(User)
+# # or
+# users = User.all()
+#
+# # Find user by ID
+# user = find(User, uuid.UUID('some-uuid-here'))
+# # or
+# user = User.find(uuid.UUID('some-uuid-here'))
+#
+# # Get first user
+# first_user = first(User)
+# # or
+# first_user = User.first()
+#
+# # Count users
+# user_count = count(User)
+# # or
+# user_count = User.count()
+#
+# # Create a new user
+# new_user = create(User, name='John', email='john@example.com', hashed_password='hashed')
+# # or
+# new_user = User.create(name='John', email='john@example.com', hashed_password='hashed')
+#
+# # Update a user
+# user.name = 'Jane'
+# save(user)
+#
+# # Delete a user
+# delete(user)
+#
+# # Work with todos
+# todos = Todo.all()
+# todo = Todo.find(some_uuid)
+# new_todo = Todo.create(title='My Todo', user_id=user.id, order=1)
+#
+# # Work with any model generically
+# all_refresh_tokens = all(RefreshToken)
+# token_count = count(RefreshToken)
+#
+# # Access session directly for advanced queries
+# from sqlmodel import select
+# users = session.exec(select(User).where(User.email == 'test@example.com')).all()
+#
+# ============================================================================

@@ -1,10 +1,24 @@
 services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: todo_user
+      POSTGRES_PASSWORD: todo_password
+      POSTGRES_DB: todo_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
   web:
     build: .
+    env_file:
+      - .env
     volumes:
       - ./app:/app/app  # mount para facilitar desenvolvimento (hot-reload)
       - .:/app  # mount root para alembic e outros arquivos
     ports:
       - "8000:8000"
     environment:
-      - ENV=development
+      - DATABASE_URL=postgresql://todo_user:todo_password@db:5432/todo_db
+    depends_on:
+      - db

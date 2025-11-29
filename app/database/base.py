@@ -7,12 +7,23 @@ from pathlib import Path
 env_path = Path(__file__).resolve().parent.parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
-# Construct database URL
-postgres_user = os.getenv("POSTGRES_USER")
-postgres_password = os.getenv("POSTGRES_PASSWORD")
-postgres_db = os.getenv("POSTGRES_DB")
+# Get database URL from environment or construct it
+database_url = os.getenv("DATABASE_URL")
 
-database_url = f"postgresql://{postgres_user}:{postgres_password}@localhost:5432/{postgres_db}"
+if not database_url:
+    # Construct DATABASE_URL from individual variables
+    postgres_user = os.getenv("POSTGRES_USER")
+    postgres_password = os.getenv("POSTGRES_PASSWORD")
+    postgres_db = os.getenv("POSTGRES_DB")
+    
+    # Use 'db' as host when in Docker (service name), 'localhost' when running locally
+    postgres_host = os.getenv("POSTGRES_HOST", "db")
+    
+    if postgres_user and postgres_password and postgres_db:
+        database_url = f"postgresql://{postgres_user}:{postgres_password}@{postgres_host}:5432/{postgres_db}"
+
+if not database_url:
+    raise ValueError("DATABASE_URL or POSTGRES_* environment variables must be set")
 
 # Create engine
 engine = create_engine(database_url, echo=True)

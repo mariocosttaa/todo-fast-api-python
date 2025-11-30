@@ -18,6 +18,7 @@ services:
     volumes:
       - ./app:/app/app  # mount para facilitar desenvolvimento (hot-reload)
       - .:/app  # mount root para alembic e outros arquivos
+      - ./logs:/app/logs  # mount logs directory for persistence
     ports:
       - "${APP_PORT:-8000}:8000"
     environment:

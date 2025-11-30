@@ -28,7 +28,7 @@ if not database_url:
     raise ValueError("DATABASE_URL or POSTGRES_* environment variables must be set")
 
 # Create engine
-engine = create_engine(database_url, echo=True)
+engine = create_engine(database_url, echo=False)  # Set to False to reduce SQL log noise
 
 # Create SessionLocal class
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

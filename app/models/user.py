@@ -1,16 +1,16 @@
-from typing import Optional
-from datetime import datetime
-from uuid import UUID
-from sqlmodel import Field
+
+from sqlalchemy import Column, String, Boolean, DateTime
+from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
+from sqlalchemy.sql import func
 from app.database.base import Base
 
-class User(Base, table=True):
+class User(Base):
     __tablename__ = "users" 
 
-    id: Optional[UUID] = Field(default=None, primary_key=True)
-    name: str = Field(max_length=50)
-    surname: Optional[str] = Field(default=None, max_length=50)
-    email: str = Field(unique=True, index=True)
-    hashed_password: str = Field(max_length=255)
-    created_at: Optional[datetime] = Field(default=None)
-    updated_at: Optional[datetime] = Field(default=None)
+    id = Column(PostgresUUID(as_uuid=True), primary_key=True, default=None)
+    name = Column(String(50), nullable=False)
+    surname = Column(String(50), nullable=True)
+    email = Column(String(255), unique=True, index=True, nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())

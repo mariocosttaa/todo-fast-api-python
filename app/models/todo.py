@@ -1,19 +1,19 @@
-from typing import Optional
-from datetime import datetime
-from uuid import UUID
-from sqlmodel import Field
+
+from sqlalchemy import Column, String, Integer, Boolean, DateTime, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
+from sqlalchemy.sql import func
 from app.database.base import Base
 
-class Todo(Base, table=True):
+class Todo(Base):
     __tablename__ = "todos"
 
-    id: Optional[UUID] = Field(default=None, primary_key=True)
-    order: int = Field(default=0)
-    user_id: UUID = Field(foreign_key="users.id", index=True)
-    title: str = Field(max_length=255, index=True)
-    description: Optional[str] = Field(default=None, max_length=500)
-    is_completed: bool = Field(default=False, index=True)
-    due_date: Optional[datetime] = Field(default=None, index=True)
-    priority: int = Field(default=1, index=True)
-    created_at: Optional[datetime] = Field(default=None, index=True)
-    updated_at: Optional[datetime] = Field(default=None, index=True)
+    id = Column(PostgresUUID(as_uuid=True), primary_key=True, default=None)
+    order = Column(Integer, default=0)
+    user_id = Column(PostgresUUID(as_uuid=True), ForeignKey("users.id"), index=True, nullable=False)
+    title = Column(String(255), index=True, nullable=False)
+    description = Column(String(500), nullable=True)
+    is_completed = Column(Boolean, default=False, index=True)
+    due_date = Column(DateTime(timezone=True), nullable=True, index=True)
+    priority = Column(Integer, default=1, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())

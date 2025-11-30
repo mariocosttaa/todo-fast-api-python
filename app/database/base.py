@@ -1,4 +1,6 @@
-from sqlmodel import SQLModel, create_engine
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 import os
 from dotenv import load_dotenv
 from pathlib import Path
@@ -28,6 +30,17 @@ if not database_url:
 # Create engine
 engine = create_engine(database_url, echo=True)
 
+# Create SessionLocal class
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 # Base class for models
-class Base(SQLModel):
-    pass
+Base = declarative_base()
+
+# Dependency for FastAPI
+def get_db():
+    """Dependency to get database session"""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

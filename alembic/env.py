@@ -7,7 +7,10 @@ from sqlalchemy import pool
 from dotenv import load_dotenv
 
 
-from app.models import user, todo, refreshToken
+# Dynamically import all models from app.models
+# This ensures all models are registered with Base.metadata automatically
+# When you add a new model, just add it to app/models/__init__.py and it will be included
+import app.models  # noqa: F401 - Import to register all models with Base.metadata
 from app.database.base import Base
 
 from alembic import context

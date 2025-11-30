@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Interactive shell for database operations and model management"""
-from sqlmodel import Session, select, inspect, text
-from app.database.base import engine
-from app.models import User, Todo, RefreshToken
+from sqlalchemy import inspect, text, select
+from sqlalchemy.orm import Session
+from app.database.base import engine, SessionLocal
+from app.models import User, Todo, Session as SessionModel
 from datetime import datetime
 from typing import Type, TypeVar, Any
 import uuid
@@ -10,7 +11,7 @@ import uuid
 # ============================================================================
 # Database Session
 # ============================================================================
-session = Session(engine)
+session = SessionLocal()
 
 # ============================================================================
 # Type Definitions
@@ -22,7 +23,7 @@ ModelType = TypeVar('ModelType')
 # ============================================================================
 def all(model_class: Type[ModelType]) -> list[ModelType]:
     """Get all records from a model"""
-    return list(session.exec(select(model_class)).all())
+    return list(session.query(model_class).all())
 
 def find(model_class: Type[ModelType], id: Any) -> ModelType | None:
     """Find a record by ID"""
@@ -30,11 +31,11 @@ def find(model_class: Type[ModelType], id: Any) -> ModelType | None:
 
 def first(model_class: Type[ModelType]) -> ModelType | None:
     """Get the first record from a model"""
-    return session.exec(select(model_class)).first()
+    return session.query(model_class).first()
 
 def count(model_class: Type[ModelType]) -> int:
     """Count total records in a model"""
-    return len(list(session.exec(select(model_class)).all()))
+    return session.query(model_class).count()
 
 def create(model_class: Type[ModelType], **kwargs) -> ModelType:
     """Create a new record"""
@@ -63,7 +64,7 @@ def _add_model_methods(model_class):
     """Add convenient ORM methods to model classes"""
     @staticmethod
     def all():
-        return list(session.exec(select(model_class)).all())
+        return list(session.query(model_class).all())
     
     @staticmethod
     def find(id):
@@ -71,11 +72,11 @@ def _add_model_methods(model_class):
     
     @staticmethod
     def first():
-        return session.exec(select(model_class)).first()
+        return session.query(model_class).first()
     
     @staticmethod
     def count():
-        return len(list(session.exec(select(model_class)).all()))
+        return session.query(model_class).count()
     
     @staticmethod
     def create(**kwargs):
@@ -94,17 +95,18 @@ def _add_model_methods(model_class):
 # ============================================================================
 # Database Management Functions
 # ============================================================================
-def drop_all_tables():
+def drop_all_tables(force: bool = False):
     """Drop all tables and clear alembic_version - DANGEROUS!"""
     inspector = inspect(engine)
     tables = inspector.get_table_names()
     
     print(f"Found {len(tables)} tables: {tables}")
-    confirm = input("Are you sure you want to drop ALL tables? (yes/no): ")
     
-    if confirm.lower() != 'yes':
-        print("Cancelled.")
-        return
+    if not force:
+        confirm = input("Are you sure you want to drop ALL tables? (yes/no): ")
+        if confirm.lower() != 'yes':
+            print("Cancelled.")
+            return
     
     with engine.connect() as conn:
         conn.execute(text("DROP TABLE IF EXISTS alembic_version CASCADE"))
@@ -124,7 +126,28 @@ def reset_database():
 # ============================================================================
 _add_model_methods(User)
 _add_model_methods(Todo)
-_add_model_methods(RefreshToken)
+_add_model_methods(SessionModel)
+
+# ============================================================================
+# Command Line Interface
+# ============================================================================
+import sys
+
+if len(sys.argv) > 1:
+    command = sys.argv[1]
+    if command == "drop-tables":
+        force = "--force" in sys.argv or "-f" in sys.argv
+        drop_all_tables(force=force)
+        sys.exit(0)
+    elif command == "reset":
+        force = "--force" in sys.argv or "-f" in sys.argv
+        drop_all_tables(force=force)
+        print("✅ Database reset complete!")
+        sys.exit(0)
+    else:
+        print(f"Unknown command: {command}")
+        print("Available commands: drop-tables, reset")
+        sys.exit(1)
 
 # ============================================================================
 # Welcome Message
@@ -133,7 +156,7 @@ print("=" * 60)
 print("FastAPI Interactive Shell")
 print("=" * 60)
 print("\n📦 Available Models:")
-print("  - User, Todo, RefreshToken")
+print("  - User, Todo, SessionModel")
 print("\n🔧 Available Utilities:")
 print("  - session: Database session")
 print("  - datetime, uuid: Python utilities")
@@ -200,11 +223,11 @@ code.interact(local=locals(), banner="")
 # new_todo = Todo.create(title='My Todo', user_id=user.id, order=1)
 #
 # # Work with any model generically
-# all_refresh_tokens = all(RefreshToken)
-# token_count = count(RefreshToken)
+# all_sessions = all(SessionModel)
+# session_count = count(SessionModel)
 #
 # # Access session directly for advanced queries
-# from sqlmodel import select
-# users = session.exec(select(User).where(User.email == 'test@example.com')).all()
+# from sqlalchemy import select
+# users = session.query(User).filter(User.email == 'test@example.com').all()
 #
 # ============================================================================

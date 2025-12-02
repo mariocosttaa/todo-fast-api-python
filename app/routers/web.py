@@ -11,20 +11,20 @@ from app.database.base import get_db
 router = APIRouter()
 
 # Auth endpoints
-@router.post("/auth/login")
+@router.post("/auth/login", name="v1-auth-login")
 def login(request: LoginRequest, db: Session = Depends(get_db)):
     return AuthController.login(db, request.email, request.password)
 
-@router.post('/auth/register')
+@router.post('/auth/register', name="v1-auth-register")
 def register(request: RegisterRequest, db: Session = Depends(get_db)):
     return AuthController.register(db, request.name,  request.surname, request.email, request.password, request.password_confirm)
 
-@router.delete('/auth/logout')
+@router.delete('/auth/logout', name="v1-auth-logout")
 def logout(current_user: User = Depends(get_current_user), current_session: SessionModel = Depends(get_current_session), db: Session = Depends(get_db)):
     return AuthController.logout(db, current_user, current_session)
 
 # Exemplo de rota protegida - mostra como usar o usuário logado
-@router.get("/auth/me")
+@router.get("/auth/me", name="v1-auth-me")
 def get_me(current_user: User = Depends(get_current_user)):
     return {
         "id": str(current_user.id),

@@ -156,3 +156,46 @@ def get_current_user(
         )
     
     return user
+
+def get_current_session(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+) -> SessionModel:
+    """
+    Dependency to get the current session from the token.
+    Useful when you need to delete or modify the current session.
+    """
+    token = credentials.credentials
+    
+    # Verify JWT token
+    payload = verify_token(token, token_type="access")
+    user_id_str = payload.get("sub")
+    
+    if not user_id_str:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload"
+        )
+    
+    # Convert string to UUID
+    try:
+        user_id = UUID(user_id_str)
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid user ID format"
+        )
+    
+    # Get session from database
+    db_session = db.query(SessionModel).filter(
+        SessionModel.token == token,
+        SessionModel.user_id == user_id
+    ).first()
+    
+    if not db_session:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session not found"
+        )
+    
+    return db_session

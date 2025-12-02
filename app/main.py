@@ -81,8 +81,17 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": "Internal server error"}
     )
 
-# router 
-app.include_router(web.router)
+# Root endpoints (not versioned - for health checks, monitoring)
+@app.get("/")
+def read_root():
+    return {"message": "API ToDo - FastAPI", "version": "1.0.0"}
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "version": "1.0.0"}
+
+# API v1 routes
+app.include_router(web.router, prefix="/v1")
 
 logger.info("Application started successfully")
 

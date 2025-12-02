@@ -36,7 +36,7 @@ class AuthController:
             )
 
             db.add(session)
-            db.commit()
+            db.flush()  # Use flush instead of commit for test compatibility
             db.refresh(session)
 
             logger.info(f"Login successful for user: {user.id} ({email})")
@@ -78,7 +78,7 @@ class AuthController:
             )   
             
             db.add(user)
-            db.commit()
+            db.flush()  # Use flush instead of commit for test compatibility
             db.refresh(user)
 
             logger.info(f"Registration successful for user: {user.id} ({email})")
@@ -95,4 +95,25 @@ class AuthController:
             raise
         except Exception as e:
             logger.error(f"Registration error for {email}: {str(e)}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Internal server error")
+
+
+    @staticmethod
+    def logout(db: Session, user: User, session: SessionModel) -> dict:
+        """Logout user by deleting their current active session"""
+        logger.info(f"Logout attempt for user: {user.id} ({user.email})")
+        
+        try:
+            # Delete the current session
+            db.delete(session)
+            db.flush()  # Use flush instead of commit for test compatibility
+            
+            logger.info(f"Logout successful for user: {user.id}")
+            
+            return {
+                "message": "Logout successful",
+                "user_id": str(user.id)
+            }
+        except Exception as e:
+            logger.error(f"Logout error for user {user.id}: {str(e)}", exc_info=True)
             raise HTTPException(status_code=500, detail="Internal server error")

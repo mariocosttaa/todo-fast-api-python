@@ -28,7 +28,7 @@ class RegisterRequest(BaseModel):
 
     class Config:
         extra = "forbid"
-        json_schema_extra = {  # ✅ Changed from schema_extra
+        json_schema_extra = {  
             "example": {
                 "name": "John",
                 "surname": "Doe",   

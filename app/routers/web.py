@@ -7,6 +7,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.controllers.auth_controller import AuthController
 from app.database.base import get_db
+from app.controllers.profile_controller import ProfileController
+from app.requests.profile.profile_update_request import ProfileUpdateRequest
+from app.requests.profile.profile_password_update_request import ProfilePasswordUpdateRequest
 
 router = APIRouter()
 
@@ -23,7 +26,15 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
 def logout(current_user: User = Depends(get_current_user), current_session: SessionModel = Depends(get_current_session), db: Session = Depends(get_db)):
     return AuthController.logout(db, current_user, current_session)
 
+#profile
 @router.get("/auth/me", name="v1-auth-me")
 def get_me(current_user: User = Depends(get_current_user)):
-    return AuthController.get_me(current_user)
+    return ProfileController.get_me(current_user)
 
+@router.put("/profile/update", name="v1-profile-update")
+def update_profile(request: ProfileUpdateRequest, current_user: User = Depends(get_current_user)):
+    return ProfileController.update(current_user, request.name, request.surname, request.email)
+
+@router.put("/profile/password/update", name="v1-profile-password-update")
+def update_password(request: ProfilePasswordUpdateRequest, current_user: User = Depends(get_current_user)):
+    return ProfileController.update_password(current_user, request.old_password, request.password, request.password_confirm)

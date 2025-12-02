@@ -118,14 +118,3 @@ class AuthController:
         except Exception as e:
             logger.error(f"Logout error for user {user.id}: {str(e)}", exc_info=True)
             raise HTTPException(status_code=500, detail="Internal server error")
-
-    
-    @staticmethod
-    def get_me(current_user: User = Depends(get_current_user)):
-        return {
-            "id": str(current_user.id),
-            "name": current_user.name,
-            "surname": current_user.surname,
-            "email": current_user.email,
-            "created_at": current_user.created_at.isoformat() if current_user.created_at else None
-        }

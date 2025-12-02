@@ -32,9 +32,9 @@ def get_me(current_user: User = Depends(get_current_user)):
     return ProfileController.get_me(current_user)
 
 @router.put("/profile/update", name="v1-profile-update")
-def update_profile(request: ProfileUpdateRequest, current_user: User = Depends(get_current_user)):
-    return ProfileController.update(current_user, request.name, request.surname, request.email)
+def update_profile(request: ProfileUpdateRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return ProfileController.update(current_user, request.name, request.surname, request.email, db)
 
 @router.put("/profile/password/update", name="v1-profile-password-update")
-def update_password(request: ProfilePasswordUpdateRequest, current_user: User = Depends(get_current_user)):
-    return ProfileController.update_password(current_user, request.old_password, request.password, request.password_confirm)
+def update_password(request: ProfilePasswordUpdateRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return ProfileController.update_password(current_user, request.old_password, request.password, request.password_confirm, db)

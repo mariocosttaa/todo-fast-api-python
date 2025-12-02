@@ -1,7 +1,5 @@
 from app.utilis.auth import verify_password
-from app.database.db_helper import get_db_session
 from app.utilis.auth import get_password_hash
-from app.utilis.auth import get_current_user
 from app.models.user import User
 from app.utilis.logger import get_logger
 from typing import List
@@ -22,21 +20,20 @@ class ProfileController:
         }
 
     @staticmethod
-    def update(currenct_user: User, name: str, surname: str, email: str) -> object:
+    def update(currenct_user: User, name: str, surname: str, email: str, db: Session) -> object:
         try:
             if email != currenct_user.email:
-                with get_db_session() as session:
-                    searchEmail = session.query(User).filter(User.email == email).first()
-                    if searchEmail:
-                        raise HTTPException(status_code=401, detail="Email already exists")
+                searchEmail = db.query(User).filter(User.email == email).first()
+                if searchEmail:
+                    raise HTTPException(status_code=401, detail="Email already exists")
                
             user = {
                 "name": name,
                 "surname": surname,
                 "email": email
             }
-            session.query(User).filter(User.id == currenct_user.id).update(user)
-            session.commit()
+            db.query(User).filter(User.id == currenct_user.id).update(user)
+            db.flush()
             
             return {
                 "message": "Profile updated successfully",
@@ -49,7 +46,7 @@ class ProfileController:
             raise HTTPException(status_code=500, detail="We found some issue trying to update your profile")
 
     @staticmethod
-    def update_password(current_user: User, old_password: str, password: str, password_confirm: str) -> object:
+    def update_password(current_user: User, old_password: str, password: str, password_confirm: str, db: Session) -> object:
         try:
             if verify_password(old_password, current_user.hashed_password) == False:
                 raise HTTPException(status_code=401, detail="Old password is incorrect")
@@ -57,13 +54,12 @@ class ProfileController:
             if verify_password(password, current_user.hashed_password) == True:
                 raise HTTPException(status_code=401, detail="New password cannot be the same as the old password")
 
-            with get_db_session() as session:
-                newPasswordHash = get_password_hash(password)
-                user = {
-                    "hashed_password": newPasswordHash
-                }
-                session.query(User).filter(User.id == current_user.id).update(user)
-                session.commit()
+            newPasswordHash = get_password_hash(password)
+            user = {
+                "hashed_password": newPasswordHash
+            }
+            db.query(User).filter(User.id == current_user.id).update(user)
+            db.flush()
             
             return {
                 "message": "Password updated successfully",

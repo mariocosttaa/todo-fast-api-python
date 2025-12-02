@@ -137,7 +137,7 @@ def get_current_user(
     if time_diff.days >= SESSION_EXPIRE_DAYS:
         # Session expired - delete it
         db.delete(db_session)
-        db.commit()
+        db.flush()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session has expired"
@@ -145,7 +145,7 @@ def get_current_user(
     
     # Update last_used_at (database will handle timezone conversion)
     db_session.last_used_at = now
-    db.commit()
+    db.flush()
     
     # Get and return user
     user = db.query(User).filter(User.id == user_id).first()

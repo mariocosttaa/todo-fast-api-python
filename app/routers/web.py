@@ -23,13 +23,7 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
 def logout(current_user: User = Depends(get_current_user), current_session: SessionModel = Depends(get_current_session), db: Session = Depends(get_db)):
     return AuthController.logout(db, current_user, current_session)
 
-# Exemplo de rota protegida - mostra como usar o usuário logado
 @router.get("/auth/me", name="v1-auth-me")
 def get_me(current_user: User = Depends(get_current_user)):
-    return {
-        "id": str(current_user.id),
-        "name": current_user.name,
-        "surname": current_user.surname,
-        "email": current_user.email,
-        "created_at": current_user.created_at.isoformat() if current_user.created_at else None
-    }
+    return AuthController.get_me(current_user)
+

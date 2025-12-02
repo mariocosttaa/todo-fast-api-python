@@ -1,4 +1,4 @@
-from app.database.base import SessionLocal
+from app.database.db_helper import get_db_session
 from app.utilis.auth import verify_password
 from pydantic import BaseModel, Field, validator
 from app.models.user import User
@@ -10,7 +10,7 @@ class LoginRequest(BaseModel):
     @validator('email')
     def validate_email(cls, v) -> str:
         """ Validate email """
-        with SessionLocal() as session:
+        with get_db_session() as session:
             if v is None or v == "":
                 raise ValueError("Email is required")
             user = session.query(User).filter(User.email == v).first()
@@ -21,7 +21,7 @@ class LoginRequest(BaseModel):
     @validator('password')
     def validate_password(cls, v, values) -> str:
         """ Validate password """
-        with SessionLocal() as session:
+        with get_db_session() as session:
             if 'email' not in values:
                 raise ValueError("Email is required")
             user = session.query(User).filter(User.email == values['email']).first()

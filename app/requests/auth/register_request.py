@@ -1,6 +1,6 @@
 from pydantic import BaseModel, validator, Field
 from sqlalchemy.orm import Session
-from app.database.base import SessionLocal
+from app.database.db_helper import get_db_session
 from app.models.user import User
 
 class RegisterRequest(BaseModel):
@@ -13,7 +13,7 @@ class RegisterRequest(BaseModel):
     @validator('email')
     def validate_email(cls, v) -> str:
         """Validate the email"""
-        with SessionLocal() as session:
+        with get_db_session() as session:
             user = session.query(User).filter(User.email == v).first()
             if user:
                 raise ValueError("Email already exists")

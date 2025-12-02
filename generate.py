@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-Simple generator script for creating models, controllers, and requests
+Simple generator script for creating models, controllers, requests, and tests
 Usage:
     python3 generate.py model <ModelName> [or Folder/ModelName for nested]
     python3 generate.py controller <ControllerName> [or Folder/ControllerName for nested]
     python3 generate.py request <RequestName> [--fields field1:type field2:type:optional]
+    python3 generate.py test <TestName> [--type controller|router|generic]
     python3 generate.py key
 """
 import argparse
@@ -18,6 +19,7 @@ BASE_DIR = Path(__file__).parent
 MODELS_DIR = BASE_DIR / "app" / "models"
 CONTROLLERS_DIR = BASE_DIR / "app" / "controllers"
 REQUESTS_DIR = BASE_DIR / "app" / "requests"
+TESTS_DIR = BASE_DIR / "tests"
 ENV_FILE = BASE_DIR / ".env"
 
 # Simple Templates
@@ -53,6 +55,60 @@ from typing import Optional
 
 class ${RequestName}(BaseModel):
 ${fields}
+""")
+
+TEST_CONTROLLER_TEMPLATE = Template("""import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
+from app.controllers.${controller_snake} import ${ControllerName}
+
+class Test${ControllerName}:
+    '''Tests for ${ControllerName}'''
+    
+    def test_example(self, db_session: Session):
+        '''Example test - replace with actual tests'''
+        # Arrange
+        # Act
+        # Assert
+        assert True
+""")
+
+TEST_ROUTER_TEMPLATE = Template("""import pytest
+from fastapi.testclient import TestClient
+
+class Test${RouterName}:
+    '''Tests for ${RouterName} endpoints'''
+    
+    def test_health_check(self, client: TestClient):
+        '''Test health check endpoint'''
+        response = client.get("/health")
+        
+        assert response.status_code == 200
+        assert response.json()["status"] == "ok"
+    
+    def test_example_endpoint(self, client: TestClient):
+        '''Example test - replace with actual endpoint tests'''
+        # Arrange
+        # Act
+        # response = client.get("/example")
+        # Assert
+        # assert response.status_code == 200
+        assert True
+""")
+
+TEST_GENERIC_TEMPLATE = Template("""import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
+
+class Test${TestName}:
+    '''Tests for ${TestName}'''
+    
+    def test_example(self, client: TestClient, db_session: Session):
+        '''Example test - replace with actual tests'''
+        # Arrange
+        # Act
+        # Assert
+        assert True
 """)
 
 def to_snake_case(name: str) -> str:
@@ -320,6 +376,68 @@ class {class_name}(BaseModel):
     
     return True
 
+def generate_test(test_name: str, test_type: str = "generic"):
+    """Generate a new test skeleton file"""
+    folder_path, class_name = parse_path_with_folders(test_name)
+    
+    # Remove 'Test' prefix if present
+    if class_name.startswith('Test'):
+        class_name = class_name[4:]
+    
+    # Determine test class name
+    test_class_name = f"Test{class_name}"
+    
+    # Build file path
+    if folder_path:
+        test_dir = TESTS_DIR / folder_path
+        test_file = test_dir / f"test_{to_snake_case(class_name)}.py"
+    else:
+        test_dir = TESTS_DIR
+        test_file = test_dir / f"test_{to_snake_case(class_name)}.py"
+    
+    if test_file.exists():
+        print(f"❌ Test {test_name} already exists at {test_file}")
+        return False
+    
+    # Create directory if needed
+    test_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Select template based on type
+    if test_type == "controller":
+        # Extract controller name
+        controller_name = class_name.replace('Controller', '').replace('controller', '')
+        if not controller_name:
+            controller_name = class_name
+        
+        controller_snake = to_snake_case(controller_name)
+        if folder_path:
+            controller_import_path = f"{folder_path.replace('/', '.')}.{controller_snake}"
+        else:
+            controller_import_path = controller_snake
+        
+        content = TEST_CONTROLLER_TEMPLATE.substitute(
+            ControllerName=class_name if class_name.endswith('Controller') else f"{class_name}Controller",
+            controller_snake=controller_import_path
+        )
+    elif test_type == "router":
+        router_name = class_name.replace('Router', '').replace('router', '')
+        if not router_name:
+            router_name = class_name
+        
+        content = TEST_ROUTER_TEMPLATE.substitute(
+            RouterName=router_name
+        )
+    else:  # generic
+        content = TEST_GENERIC_TEMPLATE.substitute(
+            TestName=class_name
+        )
+    
+    # Write file
+    test_file.write_text(content)
+    print(f"✅ Created test: {test_file}")
+    
+    return True
+
 def generate_app_key():
     """Generate a secure random app key and update .env file"""
     # Generate a 64-character URL-safe random string
@@ -359,7 +477,7 @@ def generate_app_key():
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Simple generator for models, controllers, and requests",
+        description="Simple generator for models, controllers, requests, and tests",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -374,6 +492,12 @@ Examples:
   # Generate a request schema
   python3 generate.py request RegisterRequest --fields name:str email:email password:str
   python3 generate.py request Auth/RegisterRequest  # Creates app/requests/auth/register_request.py
+
+  # Generate a test skeleton
+  python3 generate.py test AuthController --type controller
+  python3 generate.py test AuthRouter --type router
+  python3 generate.py test UserService --type generic
+  python3 generate.py test Auth/AuthController  # Creates tests/auth/test_auth_controller.py
 
   # Generate a secure app key
   python3 generate.py key
@@ -396,6 +520,13 @@ Examples:
     request_parser.add_argument('--fields', nargs='*', required=False, default=[],
                                help='Fields in format: field_name:type or field_name:type:optional (optional)')
     
+    # Test generator
+    test_parser = subparsers.add_parser('test', help='Generate a test skeleton')
+    test_parser.add_argument('name', help='Test name (PascalCase, Test prefix optional)')
+    test_parser.add_argument('--type', choices=['controller', 'router', 'generic'], 
+                            default='generic',
+                            help='Type of test to generate (default: generic)')
+    
     # App key generator
     key_parser = subparsers.add_parser('key', help='Generate a secure app key')
     
@@ -409,6 +540,7 @@ Examples:
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
     CONTROLLERS_DIR.mkdir(parents=True, exist_ok=True)
     REQUESTS_DIR.mkdir(parents=True, exist_ok=True)
+    TESTS_DIR.mkdir(parents=True, exist_ok=True)
     
     if args.command == 'model':
         generate_model(args.name)
@@ -416,6 +548,8 @@ Examples:
         generate_controller(args.name)
     elif args.command == 'request':
         generate_request(args.name, args.fields)
+    elif args.command == 'test':
+        generate_test(args.name, args.type)
     elif args.command == 'key':
         generate_app_key()
 

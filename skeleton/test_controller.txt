@@ -1,0 +1,14 @@
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
+from app.controllers.${controller_snake} import ${ControllerName}
+
+class Test${ControllerName}:
+    '''Tests for ${ControllerName}'''
+    
+    def test_example(self, db_session: Session):
+        '''Example test - replace with actual tests'''
+        # Arrange
+        # Act
+        # Assert
+        assert True

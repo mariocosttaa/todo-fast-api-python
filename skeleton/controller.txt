@@ -1,0 +1,13 @@
+from fastapi import HTTPException
+from sqlalchemy.orm import Session
+from app.utilis.logger import get_logger
+from typing import List
+from app.models.${model_name} import ${ModelName}
+
+logger = get_logger(__name__)
+
+class ${ControllerName}:
+    
+    @staticmethod
+    def all(session: Session) -> List[${ModelName}]:
+        return list(session.exec(select(${ModelName})).all())

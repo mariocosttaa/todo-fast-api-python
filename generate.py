@@ -20,96 +20,24 @@ MODELS_DIR = BASE_DIR / "app" / "models"
 CONTROLLERS_DIR = BASE_DIR / "app" / "controllers"
 REQUESTS_DIR = BASE_DIR / "app" / "requests"
 TESTS_DIR = BASE_DIR / "tests"
+SKELETON_DIR = BASE_DIR / "skeleton"
 ENV_FILE = BASE_DIR / ".env"
 
-# Simple Templates
-MODEL_TEMPLATE = Template("""from typing import Optional
-from datetime import datetime
-from uuid import UUID
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
-from sqlalchemy.sql import func
-from app.database.base import Base
+# Load templates from skeleton folder
+def load_template(template_name: str) -> Template:
+    """Load a template from the skeleton folder"""
+    template_file = SKELETON_DIR / f"{template_name}.txt"
+    if not template_file.exists():
+        raise FileNotFoundError(f"Template file not found: {template_file}")
+    return Template(template_file.read_text())
 
-class ${ModelName}(Base):
-    __tablename__ = "${table_name}"
-
-    id = Column(PostgresUUID(as_uuid=True), primary_key=True, default=None)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-""")
-
-CONTROLLER_TEMPLATE = Template("""from typing import List
-from sqlalchemy.orm import Session
-from app.models.${model_name} import ${ModelName}
-
-class ${ControllerName}:
-    
-    @staticmethod
-    def all(session: Session) -> List[${ModelName}]:
-        return list(session.exec(select(${ModelName})).all())
-""")
-
-REQUEST_TEMPLATE = Template("""from pydantic import BaseModel, Field
-from typing import Optional
-
-class ${RequestName}(BaseModel):
-${fields}
-""")
-
-TEST_CONTROLLER_TEMPLATE = Template("""import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
-from app.controllers.${controller_snake} import ${ControllerName}
-
-class Test${ControllerName}:
-    '''Tests for ${ControllerName}'''
-    
-    def test_example(self, db_session: Session):
-        '''Example test - replace with actual tests'''
-        # Arrange
-        # Act
-        # Assert
-        assert True
-""")
-
-TEST_ROUTER_TEMPLATE = Template("""import pytest
-from fastapi.testclient import TestClient
-
-class Test${RouterName}:
-    '''Tests for ${RouterName} endpoints'''
-    
-    def test_health_check(self, client: TestClient):
-        '''Test health check endpoint'''
-        response = client.get("/health")
-        
-        assert response.status_code == 200
-        assert response.json()["status"] == "ok"
-    
-    def test_example_endpoint(self, client: TestClient):
-        '''Example test - replace with actual endpoint tests'''
-        # Arrange
-        # Act
-        # response = client.get("/example")
-        # Assert
-        # assert response.status_code == 200
-        assert True
-""")
-
-TEST_GENERIC_TEMPLATE = Template("""import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
-
-class Test${TestName}:
-    '''Tests for ${TestName}'''
-    
-    def test_example(self, client: TestClient, db_session: Session):
-        '''Example test - replace with actual tests'''
-        # Arrange
-        # Act
-        # Assert
-        assert True
-""")
+# Templates loaded from skeleton folder
+MODEL_TEMPLATE = load_template("model")
+CONTROLLER_TEMPLATE = load_template("controller")
+REQUEST_TEMPLATE = load_template("request")
+TEST_CONTROLLER_TEMPLATE = load_template("test_controller")
+TEST_ROUTER_TEMPLATE = load_template("test_router")
+TEST_GENERIC_TEMPLATE = load_template("test_generic")
 
 def to_snake_case(name: str) -> str:
     """Convert PascalCase to snake_case"""

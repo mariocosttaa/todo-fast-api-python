@@ -1,0 +1,21 @@
+import pytest
+from fastapi.testclient import TestClient
+
+class Test${RouterName}:
+    '''Tests for ${RouterName} endpoints'''
+    
+    def test_health_check(self, client: TestClient):
+        '''Test health check endpoint'''
+        response = client.get("/health")
+        
+        assert response.status_code == 200
+        assert response.json()["status"] == "ok"
+    
+    def test_example_endpoint(self, client: TestClient):
+        '''Example test - replace with actual endpoint tests'''
+        # Arrange
+        # Act
+        # response = client.get("/example")
+        # Assert
+        # assert response.status_code == 200
+        assert True

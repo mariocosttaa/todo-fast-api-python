@@ -1,0 +1,13 @@
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
+
+class Test${TestName}:
+    '''Tests for ${TestName}'''
+    
+    def test_example(self, client: TestClient, db_session: Session, fake_user_data: dict):
+        '''Example test - replace with actual tests'''
+        # Arrange
+        # Act
+        # Assert
+        assert True

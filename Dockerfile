@@ -2,12 +2,12 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# copiar requirements e instalar
-COPY requirements.txt .
+# Copy backend requirements and install
+COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# copiar código
-COPY ./app /app/app
+# Copy backend application code
+COPY backend/app /app/app
 
 EXPOSE 8000
 

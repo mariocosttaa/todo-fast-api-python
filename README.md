@@ -17,7 +17,7 @@ A FastAPI-based Todo application with SQLModel, Alembic migrations, and PostgreS
 
 ```
 todo-fastapi/
-├── alembic/              # Alembic configuration
+├── alembic/             # Alembic configuration
 │   ├── env.py           # Alembic environment setup
 │   └── versions/        # Migration files (legacy location)
 ├── app/

@@ -13,8 +13,8 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 
-# Carregar variáveis de ambiente
-env_path = Path(__file__).resolve().parent.parent / '.env'
+# Carregar variáveis de ambiente do diretório raiz do projeto
+env_path = Path(__file__).resolve().parents[3] / '.env'
 load_dotenv(dotenv_path=env_path)
 
 # Usar o mesmo banco de dados real, mas com uma conexão separada para testes

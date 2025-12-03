@@ -11,7 +11,8 @@ from dotenv import load_dotenv
 setup_logging()
 logger = get_logger(__name__)
 
-env_path = Path(__file__).resolve().parent.parent / '.env'
+# Load .env from project root (one shared config for backend & frontend)
+env_path = Path(__file__).resolve().parents[2] / '.env'
 load_dotenv(dotenv_path=env_path)
 
 app = FastAPI(
@@ -91,7 +92,8 @@ def health_check():
     return {"status": "ok", "version": "1.0.0"}
 
 # API v1 routes
-app.include_router(web.router, prefix="/v1")
+app.include_router(web.router, prefix="/api/v1")
 
 logger.info("Application started successfully")
 
+    

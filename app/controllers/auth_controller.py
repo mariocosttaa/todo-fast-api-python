@@ -102,6 +102,10 @@ class AuthController:
             # Delete the current session
             db.delete(session)
             db.flush()  # Use flush instead of commit for test compatibility
+            # Clear identity map so subsequent queries in the same Session
+            # don't return the deleted instance (important in tests where
+            # a single transactional session is reused).
+            db.expunge_all()
             
             logger.info(f"Logout successful for user: {user.id}")
             

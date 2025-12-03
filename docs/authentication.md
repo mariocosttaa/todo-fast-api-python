@@ -35,9 +35,13 @@ A request is only considered authenticated if **both** are valid:
 
 - `app/database/base.py`
   - `get_db()` – FastAPI dependency that yields a `Session` per request.
+    - In **production/running app**: opens a new session, yields it to the route handler, then **commits on success** and **rolls back on error**.
+    - In **tests**: is overridden in `tests/conftest.py` to reuse the transactional test session without committing.
 
 - `app/database/db_helper.py`
-  - `get_db_session()` – context manager used mainly in validators and utilities to access the DB in a way that works both in production and tests.
+  - `get_db_session()` – context manager used mainly in validators and utilities.
+    - In **tests**: returns the injected test session and does **not** commit/rollback/close (the fixture handles the transaction and rollback).
+    - In **production**: behaves like `get_db` – creates a new session, commits on success, rolls back on error and closes.
 
 ### Auth utilities
 
@@ -49,14 +53,16 @@ Located in `app/utilis/auth.py`:
   - `exp`: expiration timestamp
   - `type`: token type (e.g. `"access"`)
 - `verify_token()` – validates the JWT (signature, expiry, and type).
-- `get_current_user()` – FastAPI dependency that:
+- `get_current_session()` – **core FastAPI dependency** that:
   1. Extracts the Bearer token from the `Authorization` header.
   2. Verifies the JWT.
-  3. Looks up a matching row in the `sessions` table.
-  4. Checks session expiration.
+  3. Uses `get_db_session()` to look up a matching row in the `sessions` table.
+  4. Checks server-side session expiration (based on `last_used_at` or `created_at`).
   5. Updates `last_used_at`.
-  6. Loads and returns the `User` model.
-- `get_current_session()` – FastAPI dependency that returns the current `Session` row for the provided token.
+  6. Returns the `Session` model instance.
+- `get_current_user()` – FastAPI dependency that:
+  1. Depends on `get_current_session` to validate the token/session.
+  2. Uses `get_db_session()` to load and return the `User` model by `current_session.user_id`.
 
 ---
 

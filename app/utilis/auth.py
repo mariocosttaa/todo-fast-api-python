@@ -5,7 +5,7 @@ import bcrypt
 from fastapi import HTTPException, status, Depends, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-from app.database.base import get_db
+from app.database.db_helper import get_db_session
 from app.models.session import Session as SessionModel
 from app.models.user import User
 from uuid import UUID
@@ -82,101 +82,26 @@ def verify_token(token: str, token_type: str = "access") -> dict:
             detail="Could not validate credentials"
         )
 
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
-) -> User:
-    """
-    Dependency to get the current authenticated user.
-    Validates JWT token, checks session in database, and validates expiration.
-    """
-    token = credentials.credentials
-    
-    # Verify JWT token
-    payload = verify_token(token, token_type="access")
-    user_id_str = payload.get("sub")
-    
-    if not user_id_str:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token payload"
-        )
-    
-    # Convert string to UUID
-    try:
-        user_id = UUID(user_id_str)
-    except (ValueError, TypeError):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid user ID format"
-        )
-    
-    # Check if session exists in database
-    db_session = db.query(SessionModel).filter(
-        SessionModel.token == token,
-        SessionModel.user_id == user_id
-    ).first()
-    
-    if not db_session:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Session not found"
-        )
-    
-    # Check session expiration (based on last_used_at or created_at)
-    now = datetime.utcnow()
-    expiration_time = db_session.last_used_at or db_session.created_at
-    
-    # Convert timezone-aware datetime to naive for comparison
-    if expiration_time.tzinfo is not None:
-        expiration_time = expiration_time.replace(tzinfo=None)
-    
-    # Calculate time difference
-    time_diff = now - expiration_time
-    
-    if time_diff.days >= SESSION_EXPIRE_DAYS:
-        # Session expired - delete it
-        db.delete(db_session)
-        db.flush()
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Session has expired"
-        )
-    
-    # Update last_used_at (database will handle timezone conversion)
-    db_session.last_used_at = now
-    db.flush()
-    
-    # Get and return user
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found"
-        )
-    
-    return user
-
 def get_current_session(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
 ) -> SessionModel:
-    """
-    Dependency to get the current session from the token.
-    Useful when you need to delete or modify the current session.
+    """Dependency to get the current session from the token.
+
+    Validates the JWT, loads the session, enforces expiration, and updates
+    `last_used_at`. This is the single source of truth for session validity.
     """
     token = credentials.credentials
-    
+
     # Verify JWT token
     payload = verify_token(token, token_type="access")
     user_id_str = payload.get("sub")
-    
+
     if not user_id_str:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token payload"
         )
-    
+
     # Convert string to UUID
     try:
         user_id = UUID(user_id_str)
@@ -185,17 +110,61 @@ def get_current_session(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid user ID format"
         )
-    
-    # Get session from database
-    db_session = db.query(SessionModel).filter(
-        SessionModel.token == token,
-        SessionModel.user_id == user_id
-    ).first()
-    
-    if not db_session:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Session not found"
-        )
-    
-    return db_session
+
+    with get_db_session() as db:
+        # Get session from database
+        db_session = db.query(SessionModel).filter(
+            SessionModel.token == token,
+            SessionModel.user_id == user_id
+        ).first()
+
+        # If there is no session, or it has been marked for deletion in this
+        # SQLAlchemy Session (e.g. after logout within the same test
+        # transaction), treat it as not found.
+        if not db_session or db_session in db.deleted:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session not found"
+            )
+
+        # Check session expiration (based on last_used_at or created_at)
+        now = datetime.utcnow()
+        expiration_time = db_session.last_used_at or db_session.created_at
+
+        # Convert timezone-aware datetime to naive for comparison
+        if expiration_time.tzinfo is not None:
+            expiration_time = expiration_time.replace(tzinfo=None)
+
+        # Calculate time difference
+        time_diff = now - expiration_time
+
+        if time_diff.days >= SESSION_EXPIRE_DAYS:
+            # Session expired - delete it
+            db.delete(db_session)
+            db.flush()
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session has expired"
+            )
+
+        # Update last_used_at (database will handle timezone conversion)
+        db_session.last_used_at = now
+        db.flush()
+
+        return db_session
+
+
+def get_current_user(
+    current_session: SessionModel = Depends(get_current_session),
+) -> User:
+    """Dependency to get the current authenticated user from the active session."""
+    with get_db_session() as db:
+        user = db.query(User).filter(User.id == current_session.user_id).first()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found"
+            )
+
+        return user

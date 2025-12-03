@@ -20,27 +20,25 @@ def set_test_session(session: Optional[Session]):
 
 @contextmanager
 def get_db_session() -> Generator[Session, None, None]:
-    """
-    Get a database session context manager.
-    
-    - In production: creates a new session from SessionLocal
-    - In tests: uses the injected test session (participates in test transaction)
-    
-    Usage:
-        with get_db_session() as session:
-            user = session.query(User).filter(User.email == email).first()
-    
-    Yields:
-        Session: Database session
+    """Get a database session context manager.
+
+    - In tests: uses the injected test session (participates in the test transaction
+      and **does not** commit or rollback here).
+    - In production: creates a new session from SessionLocal, commits on success
+      and rolls back on error.
     """
     if _test_session is not None:
         # During tests, use the test session (participates in test transaction)
-        # Don't close it - the test fixture manages its lifecycle
+        # Don't close or commit it here - the test fixture manages its lifecycle
         yield _test_session
     else:
-        # In production, create a new session
+        # In production, create a new session with commit/rollback semantics
         db = SessionLocal()
         try:
             yield db
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()

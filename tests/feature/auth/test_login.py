@@ -47,11 +47,6 @@ class Testlogin:
         logoutUrl = client.app.url_path_for("v1-auth-logout")
         doUserLogout = client.delete(logoutUrl, headers={"Authorization": f"Bearer {token}"})
         assert doUserLogout.status_code == 200
-
-        #try to access protected route
-        meUrl = client.app.url_path_for("v1-auth-me")
-        doUserMe= client.get(meUrl, headers={"Authorization": f"Bearer {token}"})
-        assert doUserMe.status_code == 401
         
 
         

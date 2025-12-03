@@ -36,11 +36,29 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Base class for models
 Base = declarative_base()
 
+"""Database base configuration and FastAPI DB dependency."""
+
+
 # Dependency for FastAPI
 def get_db():
-    """Dependency to get database session"""
+    """Yield a DB session.
+
+    In normal app usage (server running):
+    - open a new session
+    - yield it to the request handler
+    - on success, commit
+    - on error, rollback
+
+    In tests, this function is overridden in tests/conftest.py so that:
+    - the same test session is reused
+    - commit is **not** called here (tests use transactions + rollback)
+    """
     db = SessionLocal()
     try:
         yield db
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()

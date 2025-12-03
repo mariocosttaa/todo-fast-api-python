@@ -1,8 +1,8 @@
-"""Initial migration: create users, todos, and sessions tables
+"""initial_schema
 
-Revision ID: 9ecef3ad4fe7
+Revision ID: 3ef53d63d485
 Revises: 
-Create Date: 2025-11-30 02:35:11.383005
+Create Date: 2025-12-02 21:11:14.233151
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '9ecef3ad4fe7'
+revision: str = '3ef53d63d485'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -53,7 +53,7 @@ def upgrade() -> None:
     sa.Column('description', sa.String(length=500), nullable=True),
     sa.Column('is_completed', sa.Boolean(), nullable=True),
     sa.Column('due_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('priority', sa.Integer(), nullable=True),
+    sa.Column('priority', sa.Enum('low', 'medium', 'high', name='todo_priority'), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),

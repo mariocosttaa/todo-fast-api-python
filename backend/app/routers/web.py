@@ -48,7 +48,7 @@ def update_password(request: ProfilePasswordUpdateRequest, current_user: User = 
 #todos
 @router.get("/todos", name="v1-todos")
 def index(request: TodoIndexRequest =  Depends(), current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return TodoController.index(current_user, db, request.page, request.page_size, request.search, request.completed, request.active, request.due_date, request.priority)
+    return TodoController.index(current_user, db, request.page, request.page_size, request.search, request.completed, request.due_date, request.priority)
 
 @router.post("/todo/create", name="v1-todo-store")
 def store(request: TodoCreateRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):

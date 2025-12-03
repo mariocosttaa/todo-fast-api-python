@@ -22,7 +22,6 @@ class TodoController:
             page_size: Optional[int], 
             search: Optional[str], 
             completed: Optional[bool], 
-            active: Optional[bool], 
             due_date: Optional[str], 
             priority: Optional[str]) -> List[Todo]:
         try:
@@ -31,11 +30,9 @@ class TodoController:
             if search:
                 todos = todos.filter(Todo.title.contains(search))
             
-            if completed:
+            # apply completed filter only when explicitly provided (True or False)
+            if completed is not None:
                 todos = todos.filter(Todo.is_completed == completed)
-            
-            if active:
-                todos = todos.filter(Todo.is_completed == active)
             
             if due_date:
                 todos = todos.filter(Todo.due_date == due_date)
@@ -45,8 +42,14 @@ class TodoController:
             
             todos = todos.order_by(Todo.order.desc()).all()
 
+            # sane defaults and max limit for page size
+            if not page_size:
+                page_size = 20
+            elif page_size > 50:
+                page_size = 50
+
             # aplica paginação
-            items_on_page, paginator = paginate(todos, page or 1, page_size or 20)
+            items_on_page, paginator = paginate(todos, page or 1, page_size)
 
             # retorna no formato desejado
             return {

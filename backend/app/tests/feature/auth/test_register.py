@@ -9,7 +9,8 @@ class TestRegister:
         '''Testing if user can register and is automatically logged in'''
 
         # Act - register user
-        response = client.post("/v1/auth/register", json=fake_user_data)
+        createUserUrl = client.app.url_path_for("v1-auth-register")
+        response = client.post(createUserUrl, json=fake_user_data)
 
         # Assert basic registration data
         assert response.status_code == 200
@@ -45,7 +46,8 @@ class TestRegister:
         }
         
         # Act
-        response = client.post("/v1/auth/register", json=user_data)
+        createUserUrl = client.app.url_path_for("v1-auth-register")
+        response = client.post(createUserUrl, json=user_data)
         
         # Assert
         assert response.status_code == 422  # Pydantic validation error
@@ -58,7 +60,8 @@ class TestRegister:
         fake_user_data["password_confirm"] = "different_password"
         
         # Act
-        response = client.post("/v1/auth/register", json=fake_user_data)
+        createUserUrl = client.app.url_path_for("v1-auth-register")
+        response = client.post(createUserUrl, json=fake_user_data)
         
         # Assert
         assert response.status_code == 422  # Pydantic validation error

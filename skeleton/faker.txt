@@ -1,0 +1,25 @@
+from uuid import uuid4
+
+from app.database.faker.base import fake
+from app.models.${ModelName} import ${ModelName}
+
+
+def fake_${model_name}_data() -> dict:
+    """Generate fake data dict for ${ModelName}"""
+    # TODO: customize fields for ${ModelName}
+    return {
+        "id": str(uuid4()),
+        # "field": fake.sentence(),
+    }
+
+
+def make_${model_name}(*, id=None, **overrides) -> ${ModelName}:
+    """Create a ${ModelName} instance (not added/committed to DB)."""
+    data = fake_${model_name}_data()
+    if id is not None:
+        data["id"] = str(id)
+
+    # Apply any overrides from caller
+    data.update(overrides)
+
+    return ${ModelName}(**data)

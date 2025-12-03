@@ -240,6 +240,29 @@ Test isolation is broken. Check that:
 ### Validators don't see test data
 Make sure validators use `get_db_session()` instead of `SessionLocal()`.
 
+### Debugging tests
+
+- To see `print`/`pprint` output:
+
+  ```bash
+  pytest -s tests/feature/profile/test_profile_update.py::Testprofile_update::test_profile_update_with_existent_email
+  ```
+
+- To inspec variables interativamente dentro do teste, use `pytest.set_trace()`:
+
+  ```python
+  import pytest
+
+  def test_something(authenticated_client):
+      client, token, user = authenticated_client
+
+      pytest.set_trace()  # breakpoint
+
+      # o teste vai pausar aqui e abrir um prompt PDB
+  ```
+
+  No prompt PDB você pode usar comandos como `p user`, `p user.email`, `n` (next), `c` (continue), `q` (quit).
+
 ## Architecture
 
 ```

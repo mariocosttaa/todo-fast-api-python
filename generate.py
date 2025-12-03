@@ -20,6 +20,7 @@ MODELS_DIR = BASE_DIR / "app" / "models"
 CONTROLLERS_DIR = BASE_DIR / "app" / "controllers"
 REQUESTS_DIR = BASE_DIR / "app" / "requests"
 TESTS_DIR = BASE_DIR / "tests"
+FAKERS_DIR = BASE_DIR / "app" / "database" / "faker"
 SKELETON_DIR = BASE_DIR / "skeleton"
 ENV_FILE = BASE_DIR / ".env"
 
@@ -38,6 +39,7 @@ REQUEST_TEMPLATE = load_template("request")
 TEST_CONTROLLER_TEMPLATE = load_template("test_controller")
 TEST_ROUTER_TEMPLATE = load_template("test_router")
 TEST_GENERIC_TEMPLATE = load_template("test_generic")
+FAKER_TEMPLATE = load_template("faker")
 
 def to_snake_case(name: str) -> str:
     """Convert PascalCase to snake_case"""
@@ -188,6 +190,84 @@ def update_models_init(model_name: str):
     
     init_file.write_text(content)
     print(f"✅ Updated {init_file}")
+
+def update_fakers_init(model_name: str):
+    """Update app/database/faker/__init__.py to include new faker helpers"""
+    init_file = FAKERS_DIR / "__init__.py"
+
+    model_snake = to_snake_case(model_name)
+    faker_module = f"{model_snake}_faker"
+    import_line = f"from app.database.faker.{faker_module} import fake_{model_snake}_data, make_{model_snake}"
+
+    if not init_file.exists():
+        init_file.write_text(
+            import_line
+            + "\n\n__all__ = [\"fake_" + model_snake + "_data\", \"make_" + model_snake + "\"]\n"
+        )
+        print(f"✅ Created {init_file}")
+        return
+
+    content = init_file.read_text()
+
+    # Add import if not exists
+    if import_line not in content:
+        lines = content.split("\n")
+        faker_import_lines = [l for l in lines if l.startswith("from app.database.faker")]
+        if faker_import_lines:
+            last_import_idx = max(i for i, line in enumerate(lines) if line.startswith("from app.database.faker"))
+            lines.insert(last_import_idx + 1, import_line)
+        else:
+            lines.insert(0, import_line)
+        content = "\n".join(lines)
+
+    # Update __all__
+    if "__all__" in content:
+        import re
+        pattern = r"__all__\s*=\s*\[(.*?)\]"
+        match = re.search(pattern, content, re.DOTALL)
+        if match:
+            all_list = match.group(1)
+            func_name_data = f"fake_{model_snake}_data"
+            func_name_make = f"make_{model_snake}"
+            all_items = [item.strip().strip('"\'') for item in all_list.split(',') if item.strip()]
+            if func_name_data not in all_items:
+                all_items.append(func_name_data)
+            if func_name_make not in all_items:
+                all_items.append(func_name_make)
+            new_all = "__all__ = [" + ", ".join(f'"{item}"' for item in all_items) + "]"
+            content = re.sub(pattern, new_all, content, flags=re.DOTALL)
+
+    init_file.write_text(content)
+    print(f"✅ Updated {init_file}")
+
+def generate_faker(model_name: str):
+    """Generate a new faker helper file for a model"""
+    # Fakers currently only support root models (no nested folders)
+    folder_path, class_name = parse_path_with_folders(model_name)
+    if folder_path:
+        print("❌ Fakers for nested models are not supported yet. Use a root model name.")
+        return False
+
+    FAKERS_DIR.mkdir(parents=True, exist_ok=True)
+
+    model_snake = to_snake_case(class_name)
+    faker_file = FAKERS_DIR / f"{model_snake}_faker.py"
+
+    if faker_file.exists():
+        print(f"❌ Faker for {class_name} already exists at {faker_file}")
+        return False
+
+    content = FAKER_TEMPLATE.substitute(
+        ModelName=class_name,
+        model_name=model_snake,
+    )
+
+    faker_file.write_text(content)
+    print(f"✅ Created faker: {faker_file}")
+
+    update_fakers_init(class_name)
+
+    return True
 
 def generate_controller(controller_name: str):
     """Generate a new controller file"""
@@ -405,7 +485,7 @@ def generate_app_key():
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Simple generator for models, controllers, requests, and tests",
+        description="Simple generator for models, controllers, requests, tests and fakers",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -457,6 +537,10 @@ Examples:
     
     # App key generator
     key_parser = subparsers.add_parser('key', help='Generate a secure app key')
+
+    # Faker generator
+    faker_parser = subparsers.add_parser('faker', help='Generate a faker helper for a model')
+    faker_parser.add_argument('name', help='Model name (PascalCase, root models only)')
     
     args = parser.parse_args()
     
@@ -469,6 +553,7 @@ Examples:
     CONTROLLERS_DIR.mkdir(parents=True, exist_ok=True)
     REQUESTS_DIR.mkdir(parents=True, exist_ok=True)
     TESTS_DIR.mkdir(parents=True, exist_ok=True)
+    FAKERS_DIR.mkdir(parents=True, exist_ok=True)
     
     if args.command == 'model':
         generate_model(args.name)
@@ -480,6 +565,8 @@ Examples:
         generate_test(args.name, args.type)
     elif args.command == 'key':
         generate_app_key()
+    elif args.command == 'faker':
+        generate_faker(args.name)
 
 if __name__ == '__main__':
     main()

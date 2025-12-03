@@ -209,6 +209,98 @@ def test_protected_endpoint(authenticated_client):
 
 ## Troubleshooting
 
+### Centralized fakers
+
+The project exposes reusable faker helpers under `app.database.faker` so you don't need to reinvent fake data in every test:
+
+```python
+from app.database.faker import (
+    fake_user_data,
+    make_user,
+    fake_todo_data,
+    make_todo,
+    fake_session_data,
+    make_session,
+)
+```
+
+- `fake_user_data(...)` → returns a `dict` suitable for auth/profile requests. Emails are generated with a UUID suffix to avoid collisions with real data.
+- `make_user(...)` → returns a `User` ORM instance (not added/committed).
+- `fake_todo_data(user_id=...)` → returns a `dict` for creating TODOs, with `due_date` as timezone-aware UTC ISO string.
+- `make_todo(user_id=...)` → returns a `Todo` ORM instance (not added/committed).
+- `fake_session_data(...)` / `make_session(...)` → helpers for authentication sessions.
+
+These helpers are also exposed indirectly via fixtures in `tests/conftest.py`:
+
+- `fake_user_data` fixture → wraps `app.database.faker.fake_user_data()`
+- `fake_todo_data` fixture → wraps `app.database.faker.fake_todo_data()` using the `test_user` / `authenticated_client` user.
+
+Example usage in a feature test:
+
+```python
+def test_returning_all_todos(self, authenticated_client, fake_todo_data: dict):
+    client, token, user = authenticated_client
+
+    # create todo
+    todoUrl = client.app.url_path_for("v1-todo-store")
+    todoResponse = client.post(todoUrl, json=fake_todo_data, headers={"Authorization": f"Bearer {token}"})
+    assert todoResponse.status_code == 200
+
+    # get todos
+    todosUrl = client.app.url_path_for("v1-todos")
+    todosResponse = client.get(todosUrl, headers={"Authorization": f"Bearer {token}"})
+    assert todosResponse.status_code == 200
+
+    data = todosResponse.json()
+    todo_item = data["items"][0]
+    assert todo_item["title"] == fake_todo_data["title"]
+```
+
+### Code generation and faker skeletons
+
+The `generate.py` script can create models, controllers, requests, tests, and **faker helpers** using skeleton templates located in the `skeleton/` directory.
+
+Key commands:
+
+- Generate model skeleton:
+
+  ```bash
+  python generate.py model Product
+  ```
+
+- Generate controller skeleton:
+
+  ```bash
+  python generate.py controller ProductController
+  ```
+
+- Generate request schema:
+
+  ```bash
+  python generate.py request RegisterRequest --fields name:str email:email password:str
+  ```
+
+- Generate test skeleton:
+
+  ```bash
+  python generate.py test AuthController --type controller
+  python generate.py test AuthRouter --type router
+  python generate.py test UserService --type generic
+  ```
+
+- Generate a faker helper for a model (root models only):
+
+  ```bash
+  python generate.py faker User
+  ```
+
+  This will:
+
+  - Create `app/database/faker/user_faker.py` based on `skeleton/faker.txt`.
+  - Automatically update `app/database/faker/__init__.py` to export `fake_user_data` and `make_user` for that model.
+
+After generation you should open the new faker file and customize the fields inside `fake_<model>_data()` using `fake.<something>()` to match your domain model.
+
 ### Error: "DATABASE_URL not set"
 
-Ensure that the
+Ensure that the test database environment variables are configured (see `docs/testing.md` for DB setup details).

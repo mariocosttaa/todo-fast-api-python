@@ -1,13 +1,13 @@
 from app.database.db_helper import get_db_session
 from app.utilis.auth import verify_password
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ValidationInfo
 from app.models.user import User
 
 class LoginRequest(BaseModel):
     email: str = Field(..., min_length=2, max_length=50, description="The email of the user")
     password: str = Field(..., min_length=8, max_length=72, description="The password of the user (max 72 bytes)")
 
-    @validator('email')
+    @field_validator('email')
     def validate_email(cls, v) -> str:
         """ Validate email """
         with get_db_session() as session:
@@ -18,13 +18,13 @@ class LoginRequest(BaseModel):
                 raise ValueError("Email or Password are Incorrect")
         return v
 
-    @validator('password')
-    def validate_password(cls, v, values) -> str:
+    @field_validator('password')
+    def validate_password(cls, v, info: ValidationInfo) -> str:
         """ Validate password """
         with get_db_session() as session:
-            if 'email' not in values:
+            if 'email' not in info.data:
                 raise ValueError("Email is required")
-            user = session.query(User).filter(User.email == values['email']).first()
+            user = session.query(User).filter(User.email == info.data['email']).first()
             if not user:
                 raise ValueError("Email or Password are Incorrect")
             if not verify_password(v, user.hashed_password):  # Use 'v' instead of values['password']
@@ -33,7 +33,7 @@ class LoginRequest(BaseModel):
         
     class Config:
         extra = "forbid"
-        json_schema_extra = {  # ✅ Changed from schema_extra
+        json_schema_extra = { 
             "example": {
                 "email": "john.doe@example.com",
                 "password": "password123"

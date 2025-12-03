@@ -81,17 +81,11 @@ class AuthController:
             db.add(user)
             db.flush()  # Use flush instead of commit for test compatibility
             db.refresh(user)
-
             logger.info(f"Registration successful for user: {user.id} ({email})")
-            
-            return {
-                "user": {
-                    "id": str(user.id),
-                    "name": user.name,
-                    "surname": user.surname,
-                    "email": user.email
-                }
-            }
+
+            # Automatically log the user in after successful registration
+            # This will create a session and return the same structure as the login endpoint
+            return AuthController.login(db, email, password)
         except HTTPException:
             raise
         except Exception as e:

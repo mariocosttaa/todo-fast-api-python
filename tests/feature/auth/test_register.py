@@ -5,15 +5,13 @@ from sqlalchemy.orm import Session
 class TestRegister:
     '''Tests for Register'''
     
-    def test_user_can_register(self, client: TestClient, db_session: Session, fake_user_data: dict):
-        '''Testing if user can register'''
-        
-        # Arrange - fake_user_data fixture provides valid user data
-        
-        # Act
+    def test_user_can_register_and_is_logged_in(self, client: TestClient, db_session: Session, fake_user_data: dict):
+        '''Testing if user can register and is automatically logged in'''
+
+        # Act - register user
         response = client.post("/v1/auth/register", json=fake_user_data)
-        
-        # Assert
+
+        # Assert basic registration data
         assert response.status_code == 200
         data = response.json()
         assert "user" in data
@@ -21,6 +19,18 @@ class TestRegister:
         assert data["user"]["name"] == fake_user_data["name"]
         assert data["user"]["surname"] == fake_user_data["surname"]
         assert "id" in data["user"]
+
+        # Assert auto-login: access token is returned and works with /auth/me
+        assert "access_token" in data
+        token = data["access_token"]
+
+        me_url = client.app.url_path_for("v1-auth-me")
+        me_response = client.get(me_url, headers={"Authorization": f"Bearer {token}"})
+        assert me_response.status_code == 200
+        me_data = me_response.json()
+        assert me_data["email"] == fake_user_data["email"]
+        assert me_data["name"] == fake_user_data["name"]
+        assert me_data["surname"] == fake_user_data["surname"]
     
     def test_register_with_duplicate_email(self, client: TestClient, test_user):
         '''Testing that duplicate email cannot be registered'''

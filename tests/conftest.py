@@ -2,19 +2,16 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from faker import Faker
 from app.main import app
 from app.database.base import Base, get_db
 from app.models.user import User
 from app.models.session import Session as SessionModel
 from app.utilis.auth import get_password_hash
+from app.database.faker import fake_user_data as faker_fake_user_data, fake_todo_data as faker_fake_todo_data, make_session
 from uuid import uuid4
 import os
 from dotenv import load_dotenv
 from pathlib import Path
-
-# Inicializar Faker
-fake = Faker()
 
 # Carregar variáveis de ambiente
 env_path = Path(__file__).resolve().parent.parent / '.env'
@@ -107,13 +104,13 @@ def client(db_session: Session):
 @pytest.fixture
 def fake_user_data():
     """Gera dados fake de usuário usando Faker"""
-    return {
-        "name": fake.first_name(),
-        "surname": fake.last_name(),
-        "email": fake.email(),
-        "password": "TestPassword123!",
-        "password_confirm": "TestPassword123!"
-    }
+    return faker_fake_user_data()
+
+
+@pytest.fixture
+def fake_todo_data(test_user: User):
+    """Gera dados fake de todo usando faker centralizado"""
+    return faker_fake_todo_data(user_id=test_user.id)
 
 
 @pytest.fixture
@@ -149,12 +146,7 @@ def authenticated_client(client: TestClient, test_user: User, db_session: Sessio
     token = create_access_token(data={"sub": str(test_user.id)})
     
     # Criar sessão no banco
-    session = SessionModel(
-        id=uuid4(),
-        user_id=test_user.id,
-        token=token,
-        last_used_at=datetime.utcnow()
-    )
+    session = make_session(user_id=test_user.id, token=token)
     db_session.add(session)
     db_session.flush()  # Usa flush para manter na transação
     

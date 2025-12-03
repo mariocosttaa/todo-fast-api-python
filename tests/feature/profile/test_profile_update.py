@@ -1,34 +1,18 @@
-import uuid
-from app.utilis.auth import get_password_hash
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 from app.models.user import User
 from pprint import pprint
+from uuid import uuid4
+from app.utilis.auth import get_password_hash
 
 class Testprofile_update:
     '''Tests for profile_update'''
     
-    def test_profile_update(self, client: TestClient, db_session: Session, fake_user_data: dict):
+    def test_profile_update(self, authenticated_client):
         '''Test for profile update'''
-        # Arrange
-        #create user
-        password = get_password_hash(fake_user_data["password"])
-        user = User(
-            id=uuid.uuid4(),
-            name=fake_user_data["name"],
-            surname=fake_user_data["surname"],
-            email=fake_user_data["email"],
-            hashed_password=password
-        )
-        db_session.add(user)
-        db_session.commit()
-
-        #login with user created
-        loginUrl = client.app.url_path_for("v1-auth-login")
-        doUserLogin = client.post(loginUrl, json={"email": fake_user_data["email"], "password": fake_user_data["password"]})
-        assert doUserLogin.status_code == 200
-        token = doUserLogin.json()["access_token"]
+        # authenticated_client fixture already creates user, session and token
+        client, token, user = authenticated_client
 
         #update profile
         profileUrl = client.app.url_path_for("v1-profile-update")
@@ -46,40 +30,29 @@ class Testprofile_update:
         assert doUserMe.json()["name"] == "new name"
         assert doUserMe.json()["surname"] == "new surname"
 
-    def test_profile_update_with_existent_email(self, client: TestClient, db_session: Session, fake_user_data: dict):
+    def test_profile_update_with_existent_email(self, authenticated_client, db_session: Session):
         '''Test for profile update with existent email'''
-        #create user
-        password = get_password_hash(fake_user_data["password"])
-        user1 = User(
-            id=uuid.uuid4(),
-            name=fake_user_data["name"],
-            surname=fake_user_data["surname"],
-            email='email-1@example.com',
-            hashed_password=password
-        )
+        # authenticated user (user1)
+        client, token, user1 = authenticated_client
+
+        # create another user with an email that will be used in update
         user2 = User(
-            id=uuid.uuid4(),
-            name=fake_user_data["name"],
-            surname=fake_user_data["surname"],
-            email='email-2@example.com',
-            hashed_password=password
+            id=uuid4(),
+            name="Other",
+            surname="User",
+            email="email-2@example.com",
+            hashed_password=get_password_hash("password"),
         )
-        db_session.add(user1)
         db_session.add(user2)
-        db_session.commit()
+        db_session.flush()
 
-        #login with user 1 created
-        loginUrl = client.app.url_path_for("v1-auth-login")
-        doUserLogin = client.post(loginUrl, json={"email": user1.email, "password": fake_user_data["password"]})
-        assert doUserLogin.status_code == 200
-        token = doUserLogin.json()["access_token"]
-
-        #update profile with the exisitent email
+        # update profile with the existent email from user2
         profileUrl = client.app.url_path_for("v1-profile-update")
         doProfileUpdate = client.put(profileUrl, headers={"Authorization": f"Bearer {token}"}, json={
             "name": "new name", 
             "surname": "new surname",
             "email": "email-2@example.com"
         })
+        
         assert doProfileUpdate.status_code == 401
         assert "Email already exists" in doProfileUpdate.json()["detail"]

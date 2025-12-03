@@ -1,5 +1,5 @@
 from app.models.user import User
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 class ProfileUpdateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=50, description="User Name")

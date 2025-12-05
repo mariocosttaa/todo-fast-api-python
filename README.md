@@ -10,6 +10,10 @@
 
 A robust, full-stack Todo application built with a modern **FastAPI** backend and a sleek **React** frontend. Designed for performance, scalability, and developer experience.
 
+<p align="center">
+  <img src="todo-app-presentation.gif" alt="MarTaks Demo" width="800">
+</p>
+
 ---
 
 ## 🏗 Architecture
@@ -110,15 +114,20 @@ The easiest way to run the entire stack.
 
 ## 📚 Documentation
 
-Detailed documentation for specific backend components can be found in the `backend/docs` directory:
+### Backend Documentation
+The backend follows a well-documented, Laravel-inspired architecture. **Comprehensive documentation** covering all aspects of the backend implementation can be found in the [`backend/docs`](./backend/docs) directory.
+
+This documentation includes:
 
 | Topic | Description | Link |
 |-------|-------------|------|
-| **Database Access** | How to use the DB helper, sessions, and transaction management. | [Read Docs](backend/docs/database-access.md) |
-| **Authentication** | JWT implementation, user sessions, and security. | [Read Docs](backend/docs/authentication.md) |
-| **Migrations** | Managing database schema changes with Alembic. | [Read Docs](backend/docs/alembic.md) |
-| **Testing** | How to write and run tests with Pytest. | [Read Docs](backend/docs/testing.md) |
-| **Management** | CLI commands for common tasks. | [Read Docs](backend/docs/manage.md) |
+| **Database Access** | How to use the DB helper, sessions, and transaction management. | [📖 Read Docs](./backend/docs/database-access.md) |
+| **Authentication** | JWT implementation, user sessions, and security best practices. | [📖 Read Docs](./backend/docs/authentication.md) |
+| **Migrations** | Managing database schema changes with Alembic. | [📖 Read Docs](./backend/docs/alembic.md) |
+| **Testing** | How to write and run tests with Pytest, including fixtures and best practices. | [📖 Read Docs](./backend/docs/testing.md) |
+| **Management** | CLI commands for common tasks like generating controllers and models. | [📖 Read Docs](./backend/docs/manage.md) |
+
+> 💡 **Tip**: Start with the [Database Access](./backend/docs/database-access.md) and [Authentication](./backend/docs/authentication.md) docs to understand the core patterns used throughout the application.
 
 ---
 

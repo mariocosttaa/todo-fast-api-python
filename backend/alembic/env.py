@@ -16,7 +16,7 @@ from app.database.base import Base
 from alembic import context
 
 # Load environment variables from .env file
-env_path = Path(__file__).resolve().parent.parent / '.env'
+env_path = Path(__file__).resolve().parent.parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
 # this is the Alembic Config object, which provides

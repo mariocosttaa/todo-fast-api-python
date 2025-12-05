@@ -40,7 +40,8 @@ class TodoController:
             if priority:
                 todos = todos.filter(Todo.priority == priority)
             
-            todos = todos.order_by(Todo.order.desc()).all()
+            # order todos by their explicit order value (1 = top)
+            todos = todos.order_by(Todo.order.asc()).all()
 
             # sane defaults and max limit for page size
             if not page_size:
@@ -63,6 +64,41 @@ class TodoController:
         except Exception as e:
             logger.error(f"Index todo error for user {current_user.id}: {str(e)}", exc_info=True)
             raise HTTPException(status_code=500, detail="We found some issue trying to get your todos")
+
+    
+    @staticmethod
+    def today(current_user: User, db: Session, priority: Optional[str] = None) -> List[Todo]:
+        try:
+            now_utc = datetime.now(timezone.utc)
+            start_of_day = now_utc.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_of_day = start_of_day.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+            todos = db.query(Todo).filter(
+                Todo.user_id == current_user.id,
+                Todo.is_completed == False,  # noqa: E712
+                Todo.due_date >= start_of_day,
+                Todo.due_date <= end_of_day,
+            )
+
+            if priority:
+                todos = todos.filter(Todo.priority == priority)
+
+            todos = todos.order_by(Todo.order.asc()).all()
+
+            page_size = 50
+            items_on_page, paginator = paginate(todos, 1, page_size)
+
+            return {
+                "items": items_on_page,
+                "page": paginator.page,
+                "page_size": paginator.page_size,
+                "total": paginator.total_items,
+            }
+        except HTTPException as e:
+            raise e
+        except Exception as e:
+            logger.error(f"Today todo error for user {current_user.id}: {str(e)}", exc_info=True)
+            raise HTTPException(status_code=500, detail="We found some issue trying to get your today todos")
 
     
     @staticmethod
@@ -164,43 +200,43 @@ class TodoController:
     @staticmethod
     def update_order(current_user: User, db: Session, id: uuid.UUID, order: int) -> dict:
         try:
-            # get todos for the user
+            # get todos for the user ordered by current position
             todos = db.query(Todo).filter(Todo.user_id == current_user.id).order_by(Todo.order).all()
 
             # find the todo with the given id
-            todo_to_update = next((t for t in todos if t.id == id), None)
-            if todo_to_update is None:
+            current_index = next((idx for idx, t in enumerate(todos) if t.id == id), None)
+            if current_index is None:
                 raise HTTPException(status_code=404, detail="Todo not found")
 
-            # find the todo before and after the todo to update
-            if order >= todo_to_update.order:
-                min_order = todo_to_update.order
-                max_order = max(t.order for t in todos if t.order > min_order)
+            # interpret `order` as the desired 1-based position in the list
+            if order < 1:
+                new_index = 0
+            elif order > len(todos):
+                new_index = len(todos) - 1
             else:
-                max_order = todo_to_update.order
-                min_order = min(t.order for t in todos if t.order < max_order)
+                new_index = order - 1
 
-            # update the order of the todos between the min and max order
-            for todo in todos:
-                if todo.order >= min_order and todo.order <= max_order:
-                    todo.order += (max_order - min_order) // (max_order - min_order + 1)
-                    db.add(todo)
+            # remove the todo from its current position and insert at the new index
+            todo_to_move = todos.pop(current_index)
+            todos.insert(new_index, todo_to_move)
 
-            # update the order of the todo to update
-            todo_to_update.order = order
-            db.add(todo_to_update)
+            # re-assign sequential order values so DB matches visual order
+            for idx, todo in enumerate(todos, start=1):
+                todo.order = idx
+                db.add(todo)
+
             db.flush()
 
             return {
                 "message": "Todo order updated successfully",
                 "todo": {
-                    "id": todo.id,
-                    "order": todo.order,
-                    "title": todo.title,
-                    "description": todo.description,
-                    "is_completed": todo.is_completed,
-                    "due_date": todo.due_date,
-                    "priority": todo.priority,
+                    "id": todo_to_move.id,
+                    "order": todo_to_move.order,
+                    "title": todo_to_move.title,
+                    "description": todo_to_move.description,
+                    "is_completed": todo_to_move.is_completed,
+                    "due_date": todo_to_move.due_date,
+                    "priority": todo_to_move.priority,
                 }
             }
 
@@ -252,6 +288,14 @@ class TodoController:
 
             #delete todo
             db.delete(todo)
+            db.flush()
+
+            # normalize remaining todos order so it stays contiguous (1..N)
+            remaining_todos = db.query(Todo).filter(Todo.user_id == current_user.id).order_by(Todo.order).all()
+            for idx, t in enumerate(remaining_todos, start=1):
+                t.order = idx
+                db.add(t)
+
             db.flush()
 
             return {

@@ -15,6 +15,7 @@ from app.requests.profile.profile_update_request import ProfileUpdateRequest
 from app.requests.profile.profile_password_update_request import ProfilePasswordUpdateRequest
 from app.requests.todo.todo_update_request import TodoUpdateRequest
 from app.requests.todo.todo_index_request import TodoIndexRequest
+from typing import Optional
 import uuid
 
 router = APIRouter()
@@ -49,6 +50,10 @@ def update_password(request: ProfilePasswordUpdateRequest, current_user: User = 
 @router.get("/todos", name="v1-todos")
 def index(request: TodoIndexRequest =  Depends(), current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return TodoController.index(current_user, db, request.page, request.page_size, request.search, request.completed, request.due_date, request.priority)
+
+@router.get("/todos/today", name="v1-todos-today")
+def today(priority: Optional[str] = None, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return TodoController.today(current_user, db, priority)
 
 @router.post("/todo/create", name="v1-todo-store")
 def store(request: TodoCreateRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):

@@ -1,7 +1,9 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from app.routers import web
 from app.utilis.logger import setup_logging, get_logger
+from app.handlers.validation import register_exception_handlers
 import os
 import time
 from pathlib import Path
@@ -20,6 +22,9 @@ app = FastAPI(
     description="A FastAPI-based Todo application with authentication",
     version="1.0.0"
 )
+
+# Register shared exception handlers (validation, etc.)
+register_exception_handlers(app)
 
 # CORS middleware (if needed)
 app.add_middleware(
@@ -76,7 +81,6 @@ async def global_exception_handler(request: Request, exc: Exception):
         f"[UNHANDLED EXCEPTION] {request.method} {request.url.path} - {str(exc)}",
         exc_info=True
     )
-    from fastapi.responses import JSONResponse
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"}

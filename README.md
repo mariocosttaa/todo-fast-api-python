@@ -64,6 +64,11 @@ The easiest way to run the entire stack.
    - Backend API at `http://localhost:8000`
    - Frontend App at `http://localhost:3000`
    - PostgreSQL Database
+   
+   > 🧪 **Automated Testing**: The backend automatically runs all 31 tests on startup to ensure everything is working correctly. You can watch the test results with:
+   > ```bash
+   > docker compose logs backend -f
+   > ```
 
 3. **Access the App**
    - Frontend: [http://localhost:3000](http://localhost:3000)

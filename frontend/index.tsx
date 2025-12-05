@@ -2,6 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
+import { NotificationProvider } from './components/Notifications';
+import { ThemeProvider } from './providers/ThemeProvider';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -17,7 +19,11 @@ root.render(
         v7_relativeSplatPath: true,
       }}
     >
-      <App />
+      <ThemeProvider>
+        <NotificationProvider>
+          <App />
+        </NotificationProvider>
+      </ThemeProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

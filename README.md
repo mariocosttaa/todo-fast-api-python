@@ -1,323 +1,199 @@
-# Todo FastAPI
+# 🚀 MarTaks - Modern Todo Application
 
-A FastAPI-based Todo application with SQLModel, Alembic migrations, and PostgreSQL.
+![Python](https://img.shields.io/badge/python-3.11+-blue.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688.svg?style=flat&logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/react-%2320232a.svg?style=flat&logo=react&logoColor=%2361DAFB)
+![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=flat&logo=typescript&logoColor=white)
+![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=flat&logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=flat&logo=docker&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=flat&logo=tailwind-css&logoColor=white)
 
-## Features
+A robust, full-stack Todo application built with a modern **FastAPI** backend and a sleek **React** frontend. Designed for performance, scalability, and developer experience.
 
-- 🚀 FastAPI framework for high-performance API
-- 🗄️ SQLModel for database models and ORM
-- 📦 Alembic for database migrations
-- 🐘 PostgreSQL database support
-- 🔐 JWT authentication (with refresh tokens)
-- 🐚 Interactive shell for database operations
-- 🛠️ Code generators for models, routers, controllers
-- 🐳 Docker support
+---
 
-## Project Structure
+## 🏗 Architecture
+
+### Backend (`/backend`)
+Built with **FastAPI**, following a layered architecture (Controllers, Services, Repositories) for maintainability.
+- **Framework**: FastAPI (High performance, easy to learn, fast to code, ready for production)
+- **Database**: PostgreSQL with SQLAlchemy ORM
+- **Migrations**: Alembic
+- **Authentication**: JWT (JSON Web Tokens)
+- **Validation**: Pydantic v2
+- **Testing**: Pytest
+
+### Frontend (`/frontend`)
+Built with **React** and **Vite** for a lightning-fast development experience.
+- **Framework**: React 19
+- **Build Tool**: Vite
+- **Styling**: TailwindCSS v4
+- **Language**: TypeScript
+- **HTTP Client**: Axios
+
+---
+
+## 🛠 Prerequisites
+
+- **Docker** & **Docker Compose** (Recommended)
+- **Node.js** 22+ (For local frontend dev)
+- **Python** 3.11+ (For local backend dev)
+
+---
+
+## 🚀 Getting Started
+
+### Option 1: Docker (Recommended)
+The easiest way to run the entire stack.
+
+1. **Clone the repository**
+   ```bash
+   git clone <repo-url>
+   cd todo-fastapi
+   ```
+
+2. **Start the application**
+   ```bash
+   docker compose up --build -d
+   ```
+   This will start:
+   - Backend API at `http://localhost:8000`
+   - Frontend App at `http://localhost:3000`
+   - PostgreSQL Database
+
+3. **Access the App**
+   - Frontend: [http://localhost:3000](http://localhost:3000)
+   - API Docs (Swagger): [http://localhost:8000/docs](http://localhost:8000/docs)
+   - API Docs (ReDoc): [http://localhost:8000/redoc](http://localhost:8000/redoc)
+
+### Option 2: Local Development
+
+#### Backend Setup
+1. Navigate to the backend directory:
+   ```bash
+   cd backend
+   ```
+2. Create and activate a virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Run migrations (ensure DB is running via Docker or locally):
+   ```bash
+   export POSTGRES_HOST=localhost
+   alembic upgrade head
+   ```
+5. Start the server:
+   ```bash
+   python -m app.main
+   ```
+
+#### Frontend Setup
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the dev server:
+   ```bash
+   npm run dev
+   ```
+
+---
+
+## 📚 Documentation
+
+Detailed documentation for specific backend components can be found in the `backend/docs` directory:
+
+| Topic | Description | Link |
+|-------|-------------|------|
+| **Database Access** | How to use the DB helper, sessions, and transaction management. | [Read Docs](backend/docs/database-access.md) |
+| **Authentication** | JWT implementation, user sessions, and security. | [Read Docs](backend/docs/authentication.md) |
+| **Migrations** | Managing database schema changes with Alembic. | [Read Docs](backend/docs/alembic.md) |
+| **Testing** | How to write and run tests with Pytest. | [Read Docs](backend/docs/testing.md) |
+| **Management** | CLI commands for common tasks. | [Read Docs](backend/docs/manage.md) |
+
+---
+
+## 🔧 Common Commands
+
+### Backend (Docker)
+```bash
+# Run migrations
+docker compose exec backend alembic upgrade head
+
+# Create a new migration
+docker compose exec backend alembic revision --autogenerate -m "message"
+
+# Open Python Shell
+docker compose exec backend python
+
+# Run Tests
+docker compose exec backend pytest
+```
+
+### Backend (Local)
+*Ensure you have activated your virtual environment (`source backend/venv/bin/activate`)*
+```bash
+# Run migrations
+alembic upgrade head
+
+# Create a new migration
+alembic revision --autogenerate -m "message"
+
+# Run App
+python -m app.main
+```
+
+---
+
+## 📂 Project Structure
 
 ```
 todo-fastapi/
-├── alembic/             # Alembic configuration
-│   ├── env.py           # Alembic environment setup
-│   └── versions/        # Migration files (legacy location)
-├── app/
-│   ├── database/
-│   │   ├── base.py      # Database base configuration
-│   │   └── migrations/  # Migration files
-│   ├── models/          # SQLModel models
-│   │   ├── user.py
-│   │   ├── todo.py
-│   │   └── refreshToken.py
-│   ├── routers/         # API route handlers
-│   └── main.py          # FastAPI application entry point
-├── manage.py            # Interactive shell
-├── generate.py          # Code generator for models, routers, controllers
-├── alembic.ini          # Alembic configuration
-├── requirements.txt     # Python dependencies
-├── docker-compose.yml   # Docker Compose configuration
-└── Dockerfile           # Docker image configuration
+├── backend/                # FastAPI Application
+│   ├── alembic/           # Migration scripts
+│   ├── app/
+│   │   ├── controllers/   # Request handlers
+│   │   ├── models/        # SQLAlchemy models
+│   │   ├── routers/       # API Routes
+│   │   ├── services/      # Business logic
+│   │   └── ...
+│   ├── docs/              # Detailed documentation
+│   └── tests/             # Pytest tests
+├── frontend/               # React Application
+│   ├── src/
+│   │   ├── components/    # Reusable UI components
+│   │   ├── pages/         # Application pages
+│   │   └── ...
+├── docker-compose.yml     # Docker services config
+└── README.md              # This file
 ```
 
-## Prerequisites
+---
 
-- Python 3.11+
-- PostgreSQL 12+
-- pip
+## ✨ Features
 
-## Installation
+- **Full Authentication**: Sign up, Login, Logout with JWT.
+- **Task Management**: Create, Read, Update, Delete (CRUD) tasks.
+- **Filtering & Search**: Filter by status, priority, and search text.
+- **Responsive Design**: Beautiful UI that works on desktop and mobile.
+- **Dark/Light Mode**: (Coming soon)
+- **Drag & Drop**: Reorder tasks easily.
 
-1. **Clone the repository**
-```bash
-git clone <repository-url>
-cd todo-fastapi
-```
+---
 
-2. **Create a virtual environment**
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. **Install dependencies**
-```bash
-pip install -r requirements.txt
-```
-
-4. **Set up environment variables**
-Create a `.env` file in the root directory:
-```env
-DATABASE_URL=postgresql://user:password@localhost:5432/todo_db
-# OR use individual variables:
-POSTGRES_USER=user
-POSTGRES_PASSWORD=password
-POSTGRES_DB=todo_db
-```
-
-5. **Run database migrations**
-```bash
-alembic upgrade head
-```
-
-## Running the Application
-
-### Development Server
-```bash
-uvicorn app.main:app --reload
-```
-
-The API will be available at `http://localhost:8000`
-
-### Interactive API Documentation
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
-
-## Database Migrations
-
-This project uses Alembic for database migrations. See [alembic.md](./alembic.md) for detailed migration commands.
-
-### Common Migration Commands
-
-```bash
-# Create a new migration
-alembic revision --autogenerate -m "your message"
-
-# Apply migrations
-alembic upgrade head
-
-# Rollback last migration
-alembic downgrade -1
-
-# Check migration status
-alembic current
-
-# View migration history
-alembic history
-```
-
-For more details, see [alembic.md](./alembic.md).
-
-## Code Generators
-
-The project includes a generator script to quickly create models, routers, controllers, and request schemas:
-
-```bash
-python3 generate.py --help
-```
-
-### Generate a Model
-
-```bash
-# Basic model
-python3 generate.py model Product
-
-# Model with fields
-python3 generate.py model Product --fields name:str:max_length=100,index email:str:unique,index price:float
-```
-
-**Field format:** `name:type:options`
-- **name**: Field name (snake_case)
-- **type**: Python type (str, int, float, bool, UUID, datetime, etc.)
-- **options**: Comma-separated options:
-  - `unique` - Add unique constraint
-  - `index` - Add database index
-  - `max_length=N` - Set max length (e.g., `max_length=100`)
-  - `foreign_key=table.column` - Add foreign key (e.g., `foreign_key=users.id`)
-  - `optional` - Make field optional
-
-**Example:**
-```bash
-python3 generate.py model Category --fields name:str:max_length=50,index description:str:optional slug:str:unique,index
-```
-
-### Generate a Router
-
-```bash
-python3 generate.py router ProductRouter
-```
-
-This creates a router with CRUD endpoints:
-- `GET /products` - List all
-- `GET /products/{id}` - Get by ID
-- `POST /products` - Create (TODO: needs request validation)
-- `PUT /products/{id}` - Update (TODO: needs request validation)
-- `DELETE /products/{id}` - Delete
-
-**Don't forget to include it in `app/main.py`:**
-```python
-from app.routers import product_router
-app.include_router(product_router.router)
-```
-
-### Generate a Controller
-
-```bash
-python3 generate.py controller ProductController
-```
-
-Creates a controller class with static methods for CRUD operations that can be used in routers.
-
-### Generate Request Schemas
-
-```bash
-python3 generate.py request ProductRequest --fields name:str email:str:optional price:float
-```
-
-Creates Pydantic request schemas for validation:
-- `CreateProductRequest` - For creating resources
-- `UpdateProductRequest` - For updating resources (all fields optional)
-
-## Interactive Shell
-
-The project includes an interactive shell for database operations:
-
-```bash
-python3 manage.py
-```
-
-This opens a Python REPL with:
-- Pre-configured database session
-- Helper functions for CRUD operations
-- Direct access to all models
-
-**Example usage:**
-```python
-# Get all users
-users = User.all()
-
-# Create a new user
-user = User.create(name='John', email='john@example.com', hashed_password='hashed')
-
-# Find user by ID
-user = User.find(uuid.UUID('some-uuid'))
-```
-
-For complete documentation, see [systemDoc/manage.md](./systemDoc/manage.md).
-
-## Docker
-
-### Using Docker Compose
-
-```bash
-# Start services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
-```
-
-### Building Docker Image
-
-```bash
-docker build -t todo-fastapi .
-docker run -p 8000:8000 todo-fastapi
-```
-
-## API Endpoints
-
-### Health Check
-- `GET /` - Root endpoint
-- `GET /health` - Health check endpoint
-
-More endpoints will be added as the application develops.
-
-## Development
-
-### Code Structure
-
-- **Models**: Located in `app/models/` - SQLModel classes
-- **Routers**: Located in `app/routers/` - API route handlers
-- **Database**: Configuration in `app/database/base.py`
-- **Migrations**: Stored in `app/database/migrations/`
-
-### Adding New Models
-
-**Using the generator (recommended):**
-```bash
-python3 generate.py model Product --fields name:str:index price:float
-```
-
-**Manual steps:**
-1. Create model in `app/models/`
-2. Import in `app/models/__init__.py` (auto-updated by generator)
-3. Create migration: `alembic revision --autogenerate -m "add new model"`
-4. Apply migration: `alembic upgrade head`
-
-### Adding New Routes
-
-**Using the generator (recommended):**
-```bash
-python3 generate.py router ProductRouter
-```
-
-**Manual steps:**
-1. Create router in `app/routers/`
-2. Import and include in `app/main.py`:
-   ```python
-   from app.routers import product_router
-   app.include_router(product_router.router)
-   ```
-
-## Testing
-
-```bash
-# Run tests
-pytest
-
-# Run with coverage
-pytest --cov=app
-```
-
-## Documentation
-
-- [Alembic Commands](./alembic.md) - Database migration guide
-- [Interactive Shell](./systemDoc/manage.py.md) - Shell usage documentation
-
-## Environment Variables
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `DATABASE_URL` | Full PostgreSQL connection string | Yes* |
-| `POSTGRES_USER` | PostgreSQL username | Yes* |
-| `POSTGRES_PASSWORD` | PostgreSQL password | Yes* |
-| `POSTGRES_DB` | PostgreSQL database name | Yes* |
-
-*Either `DATABASE_URL` or all three `POSTGRES_*` variables are required.
-
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## License
-
-[Add your license here]
-
-## Support
-
-For issues and questions, please open an issue on GitHub.
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request

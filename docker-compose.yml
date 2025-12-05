@@ -18,7 +18,7 @@ services:
       - .env
     volumes:
       # Mount backend code for hot-reload during development
-      - ./backend/app:/app/app
+      -  ./backend:/app 
       - ./backend/logs:/app/logs
     ports:
       - "${APP_PORT:-8000}:8000"
@@ -34,6 +34,8 @@ services:
       - .env
     volumes:
       - ./frontend:/app
+      # Use named volume for node_modules to improve performance
+      - frontend_node_modules:/app/node_modules
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 3000"
     ports:
       - "3000:3000"
@@ -42,3 +44,4 @@ services:
 
 volumes:
   postgres_data:
+  frontend_node_modules:
